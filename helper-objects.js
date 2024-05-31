@@ -23,8 +23,8 @@ const basicPlan = {
 };
 
 const standardPlan = {
-  productId: "prod_QC8k3EWuZ6eaNA",
-  priceId: "price_1PLkSxSGVFR9zdBLGMxhk0mz",
+  productId: "prod_QCsoYQQQst7WD5",
+  priceId: "price_1PMT3KSGVFR9zdBLsJlaauUG",
 };
 
 const premiumPlan = {
