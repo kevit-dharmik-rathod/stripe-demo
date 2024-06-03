@@ -11,10 +11,10 @@
       <input type="text" id="name" placeholder="Enter your name" required />
       <input type="email" id="email" placeholder="Enter your email" required />
       <select id="plan">
-        <option value="price_1PLkQ3SGVFR9zdBL4boNmkmF">Free Forever</option>
-        <option value="price_1PLkRPSGVFR9zdBLL1rqX7xv">Basic Plan</option>
-        <option value="price_1PMT3KSGVFR9zdBLsJlaauUG">Standard Plan</option>
-        <option value="price_1PLkWiSGVFR9zdBLHNwooydk">Premium Plan</option>
+        <option value="price_1PNDhjSGVFR9zdBLFta7Z9r1">Free Forever</option>
+        <option value="price_1PNDidSGVFR9zdBLiQYD9zuM">Basic Plan</option>
+        <option value="price_1PNDjUSGVFR9zdBLSB97meZm">Standard Plan</option>
+        <option value="price_1PNDk5SGVFR9zdBLcGXUJozR">Premium Plan</option>
       </select>
       <button type="submit">Subscribe</button>
     </form>
@@ -23,19 +23,16 @@
     <form id="update-form">
       <input
         type="text"
-        id="subscription-id"
-        placeholder="Enter subscription ID"
+        id="customer-id"
+        placeholder="Enter CustomerId"
         required
       />
       <select id="new-plan">
-        <option value="price_1PLkQ3SGVFR9zdBL4boNmkmF">Free Forever</option>
-        <option value="price_1PLkRPSGVFR9zdBLL1rqX7xv">Basic Plan</option>
-        <option value="price_1PMT3KSGVFR9zdBLsJlaauUG">Standard Plan</option>
-        <option value="price_1PLkWiSGVFR9zdBLHNwooydk">Premium Plan</option>
+        <option value="price_1PNDhjSGVFR9zdBLFta7Z9r1">Free Forever</option>
+        <option value="price_1PNDidSGVFR9zdBLiQYD9zuM">Basic Plan</option>
+        <option value="price_1PNDjUSGVFR9zdBLSB97meZm">Standard Plan</option>
+        <option value="price_1PNDk5SGVFR9zdBLcGXUJozR">Premium Plan</option>
       </select>
-      <label>
-        <input type="checkbox" id="apply-discount" /> Apply Discount
-      </label>
       <button type="submit">Update</button>
     </form>
     <script src="https://js.stripe.com/v3/" async></script>
@@ -53,7 +50,7 @@
         console.log(`input email is ${email}`);
         console.log(`input priceId is ${priceId}`);
         const response = await fetch(
-          "https://vbpflfwp-3000.inc1.devtunnels.ms/create-subscription",
+          "https://6f9dpz0d-3000.inc1.devtunnels.ms/create-subscription",
           {
             method: "POST",
             headers: {
@@ -72,38 +69,35 @@
         if (response.ok) {
           window.location.href = url; // Redirect to the checkout URL
         } else {
-          window.location.href = "http://localhost:3000/cancel";
+          window.location.href =
+            "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel";
         }
       });
 
       updateForm.addEventListener("submit", async (event) => {
         event.preventDefault();
-        const subscriptionId = document.getElementById("subscription-id").value;
+        const customerId = document.getElementById("customer-id").value;
+        console.log('customerId is \n',customerId);
         const newPriceId = document.getElementById("new-plan").value;
-        const applyDiscount = document.getElementById("apply-discount").checked;
+        console.log('newPriceId is \n',newPriceId);
+        const response = await fetch("https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-subscription", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            customerId: customerId,
+            newPriceId: newPriceId,
+          }),
+        });
 
-        const response = await fetch(
-          "https://vbpflfwp-3000.inc1.devtunnels.ms/update-subscription",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              subscriptionId: subscriptionId,
-              newPriceId: newPriceId,
-              applyDiscount: applyDiscount,
-            }),
-          }
-        );
-
-        const updatedSubscription = await response.json();
-
+        const { url } = await response.json();
+        console.log('url is \n',url);
         if (response.ok) {
-          window.location.href = `https://vbpflfwp-3000.inc1.devtunnels.ms/success?subscription_id=${updatedSubscription.id}`;
+          window.location.href = url;
         } else {
           window.location.href =
-            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel";
+            "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel";
         }
       });
     </script>
