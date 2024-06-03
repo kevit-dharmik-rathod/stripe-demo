@@ -15,6 +15,8 @@
         <option value="price_1PNDidSGVFR9zdBLiQYD9zuM">Basic Plan</option>
         <option value="price_1PNDjUSGVFR9zdBLSB97meZm">Standard Plan</option>
         <option value="price_1PNDk5SGVFR9zdBLcGXUJozR">Premium Plan</option>
+        <option value="price_1PNSqGSGVFR9zdBLTB34IQtT">Basic INR Plan</option>
+        <option value="price_1PNSqdSGVFR9zdBL6rcrBMl2">Premium INR Plan</option>
       </select>
       <button type="submit">Subscribe</button>
     </form>
@@ -32,6 +34,8 @@
         <option value="price_1PNDidSGVFR9zdBLiQYD9zuM">Basic Plan</option>
         <option value="price_1PNDjUSGVFR9zdBLSB97meZm">Standard Plan</option>
         <option value="price_1PNDk5SGVFR9zdBLcGXUJozR">Premium Plan</option>
+        <option value="price_1PNSqGSGVFR9zdBLTB34IQtT">Basic INR Plan</option>
+        <option value="price_1PNSqdSGVFR9zdBL6rcrBMl2">Premium INR Plan</option>
       </select>
       <button type="submit">Update</button>
     </form>
@@ -50,7 +54,7 @@
         console.log(`input email is ${email}`);
         console.log(`input priceId is ${priceId}`);
         const response = await fetch(
-          "https://6f9dpz0d-3000.inc1.devtunnels.ms/create-subscription",
+          "https://vbpflfwp-3000.inc1.devtunnels.ms/create-subscription",
           {
             method: "POST",
             headers: {
@@ -70,34 +74,37 @@
           window.location.href = url; // Redirect to the checkout URL
         } else {
           window.location.href =
-            "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel";
+            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel";
         }
       });
 
       updateForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         const customerId = document.getElementById("customer-id").value;
-        console.log('customerId is \n',customerId);
+        console.log("customerId is \n", customerId);
         const newPriceId = document.getElementById("new-plan").value;
-        console.log('newPriceId is \n',newPriceId);
-        const response = await fetch("https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-subscription", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            customerId: customerId,
-            newPriceId: newPriceId,
-          }),
-        });
+        console.log("newPriceId is \n", newPriceId);
+        const response = await fetch(
+          "https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-subscription",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              customerId: customerId,
+              newPriceId: newPriceId,
+            }),
+          }
+        );
 
         const { url } = await response.json();
-        console.log('url is \n',url);
+        console.log("url is \n", url);
         if (response.ok) {
           window.location.href = url;
         } else {
           window.location.href =
-            "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel";
+            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel";
         }
       });
     </script>
