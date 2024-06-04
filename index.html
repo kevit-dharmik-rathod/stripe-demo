@@ -21,7 +21,7 @@
       <button type="submit">Subscribe</button>
     </form>
 
-    <h2>Update Subscription</h2>
+    <h2>Upgrade the Subscription</h2>
     <form id="update-form">
       <input
         type="text"
@@ -50,9 +50,6 @@
         const name = document.getElementById("name").value;
         const email = document.getElementById("email").value;
         const priceId = document.getElementById("plan").value;
-        console.log(`input name is ${name}`);
-        console.log(`input email is ${email}`);
-        console.log(`input priceId is ${priceId}`);
         const response = await fetch(
           "https://vbpflfwp-3000.inc1.devtunnels.ms/create-subscription",
           {

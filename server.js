@@ -130,16 +130,13 @@ app.post("/upgrade-subscription", async (req, res) => {
       status: "active",
       limit: 1,
     });
-    console.log("subscriptions is \n", JSON.stringify(subscriptions, null, 2));
     if (subscriptions.data.length === 0) {
       throw new Error("No active subscription found for the customer.");
     }
 
     const subscription = subscriptions.data[0];
-
     // Get the current subscription item id for the preview the proration amount
     const subscriptionItemId = subscription.items.data[0].id;
-
     // Retrieve upcoming invoice to calculate proration
     const prorationDate = Math.floor(Date.now() / 1000);
     const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
@@ -154,13 +151,7 @@ app.post("/upgrade-subscription", async (req, res) => {
       subscription_proration_date: prorationDate,
     });
     // Calculate the proration amount
-    console.log(
-      "upcomingInvoice.lines.data.length, amount, proration",
-      upcomingInvoice.lines.data.length,
-      upcomingInvoice.lines.data[0].amount,
-      upcomingInvoice.lines.data[0].proration
-    );
-    console.log("type of upcomingInvoice.lines.data[0].proration");
+
     let prorationAmount;
     let line_items;
     let session;
@@ -181,13 +172,11 @@ app.post("/upgrade-subscription", async (req, res) => {
         mode: "subscription",
         customer: customerId,
         line_items,
-        success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-success?customerId=${customerId}&newPriceId=${newPriceId}&subscriptionItemId=${subscription.id}`,
-        cancel_url:
-          "https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-cancel",
+        success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
+        cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
       });
       res.send({ url: session.url });
     } else {
-      console.log("Entered in to the else condition \n");
       prorationAmount = upcomingInvoice.lines.data
         .filter((line) => line.proration)
         .reduce((total, line) => total + line.amount, 0);
@@ -212,11 +201,10 @@ app.post("/upgrade-subscription", async (req, res) => {
         mode: "payment",
         customer: customerId,
         line_items,
-        success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-success?customerId=${customerId}&newPriceId=${newPriceId}&subscriptionItemId=${subscription.id}`,
-        cancel_url:
-          "https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-cancel",
+        success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
+        cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
       });
-      console.log("url is ", session.url);
+
       res.send({ url: session.url });
     }
     console.log("Total proration amount is", prorationAmount);
@@ -226,34 +214,84 @@ app.post("/upgrade-subscription", async (req, res) => {
   }
 });
 
-app.get("/upgrade-payment-success", async (req, res) => {
+app.get("/upgrade-payment-success/success", async (req, res) => {
+  const { customerId, subscriptionId, newPriceId, subscriptionItemId } =
+    req.query;
   try {
-    const customerId = req.query.customerId;
-    const newPriceId = req.query.newPriceId;
-    const subscriptionItemId = req.query.subscriptionItemId;
-    // Update subscription to the new price for the next billing cycle
-    const updateSubscription = await stripe.subscriptions.update(
-      subscriptionItemId,
-      {
-        items: [
-          {
-            price: newPriceId,
-          },
-        ],
-        proration_behavior: "always_invoice", 
-      }
-    );
-
-    // Optionally, you can send a response indicating that the subscription has been successfully updated
-    res.status(200).send({
-      message: "Subscription successfully updated.",
-      data: updateSubscription,
+    const subscription = await stripe.subscriptions.update(subscriptionId, {
+      items: [
+        {
+          id: subscriptionItemId,
+          deleted: true,
+        },
+        {
+          price: newPriceId,
+        },
+      ],
+      proration_behavior: "none",
     });
-  } catch (error) {
-    console.log("Error updating subscription:", error);
-    res
-      .status(500)
-      .send({ error: "An error occurred while updating the subscription." });
+    res.status(200).send({
+      message: "upgrade subscription successfully",
+      newSubscription: subscription,
+    });
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+app.post("/downgrade-subscription", async (req, res) => {
+  try {
+    const { customerId, newPriceId } = req.body;
+
+    const subscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      status: "active",
+      limit: 1,
+    });
+
+    if (subscriptions.data.length === 0) {
+      throw new Error("No active subscription found for the customer.");
+    }
+
+    const subscriptionId = subscriptions.data[0].id;
+    console.log("subscriptionId is \n", subscriptionId);
+    const oldPriceId = subscriptions.data[0].plan.id;
+    console.log("oldPriceId is \n", oldPriceId);
+
+    console.log("subId is \n", subscriptionId);
+    const subscriptionSchedule = await stripe.subscriptionSchedules.create({
+      from_subscription: subscriptionId,
+    });
+
+    const downgradeSubscription = await stripe.subscriptionSchedules.create({
+      customer: customerId,
+      start_date: "now",
+      end_behavior: "release",
+      phases: [
+        {
+          items: [{ price: oldPriceId, quantity: 1 }],
+          iterations: 1,
+          proration_behavior: "none",
+        },
+        {
+          items: [
+            {
+              price: newPriceId,
+              quantity: 1,
+            },
+          ],
+          iterations: 1,
+          proration_behavior: "none",
+        },
+      ],
+    });
+
+    res.status(200).send({
+      message: "create schedule for downgrade subscription successfully",
+      downgradeSubscription,
+    });
+  } catch (e) {
+    console.log(e);
   }
 });
 app.get("/ping", (req, res) => {
