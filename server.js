@@ -172,8 +172,14 @@ app.post("/upgrade-subscription", async (req, res) => {
         mode: "subscription",
         customer: customerId,
         line_items,
-        success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
-        cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
+
+        // urls for hp
+        success_url: `https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
+        cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
+
+        // urls for dell
+        // success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
+        // cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
       });
       res.send({ url: session.url });
     } else {
@@ -201,8 +207,13 @@ app.post("/upgrade-subscription", async (req, res) => {
         mode: "payment",
         customer: customerId,
         line_items,
-        success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
-        cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
+        // urls for hp
+        success_url: `https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
+        cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
+
+        // urls for dell
+        // success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
+        // cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
       });
 
       res.send({ url: session.url });
@@ -280,7 +291,7 @@ app.post("/downgrade-subscription", async (req, res) => {
               quantity: 1,
             },
           ],
-          iterations: 1,
+          // iterations: 1,
           proration_behavior: "none",
         },
       ],
