@@ -73,6 +73,23 @@ app.post(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 //firstly we create the customer in the stripe
+
+async function createCustomerWithoutPayment(name, email) {
+  try {
+    const newCustomer = await stripe.customers.create({ name, email });
+    const subscription = await stripe.subscriptions.create({
+      customer: newCustomer.id,
+      items: [
+        {
+          price: "price_1PO0QRSGVFR9zdBLWFEl7fl8",
+        },
+      ],
+    });
+    return newCustomer;
+  } catch (err) {
+    console.log(`Error in while creatingCustomerWithOutAnyPayment: ${err} `);
+  }
+}
 async function createCustomer(name, email) {
   try {
     return await stripe.customers.create({ name, email });
@@ -81,7 +98,7 @@ async function createCustomer(name, email) {
   }
 }
 
-async function createCheckoutSession(customerEmail, cId, priceId) {
+async function createCheckoutSession(cId, priceId) {
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ["card"],
     customer: cId,
@@ -98,6 +115,14 @@ async function createCheckoutSession(customerEmail, cId, priceId) {
   return session.url;
 }
 
+app.post("/customer/free-subscription", async (req, res) => {
+  try {
+    const { name, email } = req.body;
+    const response = await createCustomerWithoutPayment(name, email);
+    return res.status(200).send({ message: "success", response });
+  } catch (e) {}
+});
+
 app.get("/success", (req, res) => {
   res.status(200).send({ status: "Payment successfully" });
 });
@@ -110,16 +135,13 @@ app.post("/create-subscription", async (req, res) => {
   try {
     const { name, email, priceId } = req.body;
     const customer = await createCustomer(name, email);
-    const checkoutUrl = await createCheckoutSession(
-      email,
-      customer.id,
-      priceId
-    );
+    const checkoutUrl = await createCheckoutSession(customer.id, priceId);
     res.send({ url: checkoutUrl });
   } catch (e) {
     throw new Error(e);
   }
 });
+
 app.post("/upgrade-subscription", async (req, res) => {
   try {
     const { customerId, newPriceId } = req.body;
@@ -128,8 +150,8 @@ app.post("/upgrade-subscription", async (req, res) => {
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
       status: "active",
-      limit: 1,
     });
+    console.log("subscriptions is \n", JSON.stringify(subscriptions, null, 2));
     if (subscriptions.data.length === 0) {
       throw new Error("No active subscription found for the customer.");
     }
@@ -150,77 +172,56 @@ app.post("/upgrade-subscription", async (req, res) => {
       ],
       subscription_proration_date: prorationDate,
     });
+    console.log(
+      "upcoming invoice is \n",
+      JSON.stringify(upcomingInvoice, null, 2)
+    );
     // Calculate the proration amount
-
     let prorationAmount;
-    let line_items;
-    let session;
     if (
       upcomingInvoice.lines.data.length === 1 &&
       upcomingInvoice.lines.data[0].proration === false
     ) {
       prorationAmount = upcomingInvoice.lines.data[0].amount;
-      line_items = [
-        {
-          price: newPriceId, // Switch to new price
-          quantity: 1,
-        },
-      ];
-      // Create a Checkout Session for the immediate proration amount
-      session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
-        mode: "subscription",
-        customer: customerId,
-        line_items,
-
-        // urls for hp
-        success_url: `https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
-        cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
-
-        // urls for dell
-        // success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
-        // cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
-      });
-      res.send({ url: session.url });
     } else {
       prorationAmount = upcomingInvoice.lines.data
         .filter((line) => line.proration)
         .reduce((total, line) => total + line.amount, 0);
-
-      line_items = [
-        {
-          price_data: {
-            currency: subscription.currency,
-            unit_amount_decimal: prorationAmount,
-            product_data: {
-              name: "Proration Product 1",
-              description: "Proration Product 1",
-              images: [],
-            },
-          },
-          quantity: 1,
-        },
-      ];
-      // Create a Checkout Session for the immediate proration amount
-      session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
-        mode: "payment",
-        customer: customerId,
-        line_items,
-        // urls for hp
-        success_url: `https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
-        cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
-
-        // urls for dell
-        // success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
-        // cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
-      });
-
-      res.send({ url: session.url });
     }
     console.log("Total proration amount is", prorationAmount);
+
+    // const line_items = [
+    //   {
+    //     price_data: {
+    //       currency: subscription.currency,
+    //       unit_amount_decimal: prorationAmount,
+    //       product_data: {
+    //         name: "Proration Product 1",
+    //         description: "Proration Product 1",
+    //         images: [],
+    //       },
+    //     },
+    //     quantity: 1,
+    //   },
+    // ];
+    // // Create a Checkout Session for the immediate proration amount
+    // const session = await stripe.checkout.sessions.create({
+    //   payment_method_types: ["card"],
+    //   mode: "payment",
+    //   customer: customerId,
+    //   line_items,
+    //   // urls for hp
+    //   // success_url: `https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
+    //   // cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
+
+    //   // urls for dell
+    //   success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
+    //   cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
+    // });
+
+    // res.send({ url: session.url });
   } catch (e) {
-    console.log("Error is \n", e);
+    console.log(e);
     res.status(400).send({ error: e.message });
   }
 });
@@ -265,37 +266,36 @@ app.post("/downgrade-subscription", async (req, res) => {
     }
 
     const subscriptionId = subscriptions.data[0].id;
-    console.log("subscriptionId is \n", subscriptionId);
     const oldPriceId = subscriptions.data[0].plan.id;
-    console.log("oldPriceId is \n", oldPriceId);
 
-    console.log("subId is \n", subscriptionId);
     const subscriptionSchedule = await stripe.subscriptionSchedules.create({
       from_subscription: subscriptionId,
     });
 
-    const downgradeSubscription = await stripe.subscriptionSchedules.create({
-      customer: customerId,
-      start_date: "now",
-      end_behavior: "release",
-      phases: [
-        {
-          items: [{ price: oldPriceId, quantity: 1 }],
-          iterations: 1,
-          proration_behavior: "none",
-        },
-        {
-          items: [
-            {
-              price: newPriceId,
-              quantity: 1,
-            },
-          ],
-          // iterations: 1,
-          proration_behavior: "none",
-        },
-      ],
-    });
+    const phases = subscriptionSchedule.phases.map((phase) => ({
+      start_date: phase.start_date,
+      end_date: phase.end_date,
+      items: phase.items,
+    }));
+
+    const downgradeSubscription = await stripe.subscriptionSchedules.update(
+      subscriptionSchedule.id,
+      {
+        end_behavior: "release",
+        phases: [
+          ...phases,
+          {
+            items: [
+              {
+                price: newPriceId,
+                quantity: 1,
+              },
+            ],
+            proration_behavior: "none",
+          },
+        ],
+      }
+    );
 
     res.status(200).send({
       message: "create schedule for downgrade subscription successfully",
@@ -305,6 +305,60 @@ app.post("/downgrade-subscription", async (req, res) => {
     console.log(e);
   }
 });
+
+app.get("/schedule-success", async (req, res) => {
+  res.send({
+    message: "Successfully schedule for the downgrade the subscription \n",
+  });
+});
+
+app.get("/schedule-cancel", async (req, res) => {
+  res.send({
+    message:
+      "Getting an error while creating schedule for the downgrade subscription\n",
+  });
+});
+
+app.post("/add-additional-project", async (req, res) => {
+  try {
+    const { customerId, newPriceId } = req.body;
+    const checkoutUrl = await createCheckoutSession(customerId, newPriceId);
+    res.send({ url: checkoutUrl });
+  } catch (e) {
+    console.log(`Error in the add-additional-project: ${e}`);
+  }
+});
+
+app.post("/add-additional-credit", async (req, res) => {
+  try {
+    const { subId, newPriceId } = req.body;
+    const subscription = await stripe.subscriptions.retrieve(subId);
+    if (!subscription) {
+      throw new Error(`No subscription found with this id: ${subId}`);
+    }
+    const updatedSubscription = await stripe.subscriptions.update(subId, {
+      items: [
+        {
+          price: newPriceId,
+          quantity: 1,
+        },
+      ],
+      proration_behavior: "always_invoice",
+    });
+    return res.status(200).send({ message: "success", updatedSubscription });
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+app.get("/success-additional-credit", async (req, res) => {
+  res.send({ message: "SuccessFully add on new credit plan" });
+});
+
+app.get("/cancel-additional-credit", async (req, res) => {
+  res.send({ message: "Error in the add new credit plan" });
+});
+app.post("/add-on-credits", async (req, res) => {});
 app.get("/ping", (req, res) => {
   res.json({ ping: "pong" });
 });
