@@ -137,7 +137,7 @@
         const email = document.getElementById("email").value;
         const priceId = document.getElementById("plan").value;
         const response = await fetch(
-          "https://vbpflfwp-3000.inc1.devtunnels.ms/create-subscription",
+          "https://6f9dpz0d-3000.inc1.devtunnels.ms/create-subscription",
           {
             method: "POST",
             headers: {
@@ -156,7 +156,7 @@
           window.location.href = url; // Redirect to the checkout URL
         } else {
           window.location.href =
-            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel";
+            "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel";
         }
       });
 
@@ -165,7 +165,7 @@
         const customerId = document.getElementById("customer-id").value;
         const newPriceId = document.getElementById("new-plan").value;
         const response = await fetch(
-          "https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-subscription",
+          "https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-subscription",
           {
             method: "POST",
             headers: {
@@ -183,7 +183,7 @@
           window.location.href = url;
         } else {
           window.location.href =
-            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel";
+            "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel";
         }
       });
 
@@ -195,7 +195,7 @@
         const newPriceId = document.getElementById("new-downgrade-plan").value;
         try {
           const response = await fetch(
-            "https://vbpflfwp-3000.inc1.devtunnels.ms/downgrade-subscription",
+            "https://6f9dpz0d-3000.inc1.devtunnels.ms/downgrade-subscription",
             {
               method: "POST",
               headers: {
@@ -210,10 +210,10 @@
           if (response.ok) {
             const result = await response.json();
             window.location.href =
-              "https://vbpflfwp-3000.inc1.devtunnels.ms/schedule-success";
+              "https://6f9dpz0d-3000.inc1.devtunnels.ms/schedule-success";
           } else {
             window.location.href =
-              "https://vbpflfwp-3000.inc1.devtunnels.ms/schedule-cancel";
+              "https://6f9dpz0d-3000.inc1.devtunnels.ms/schedule-cancel";
           }
         } catch (e) {
           console.log("Error in the downgrade frontend: ", e);
@@ -227,7 +227,7 @@
         console.log("customerId in the additionalProjectForm\n", customerId);
         console.log("newPriceId in the additionalProjectForm\n", newPriceId);
         const response = await fetch(
-          "https://vbpflfwp-3000.inc1.devtunnels.ms/add-additional-project",
+          "https://6f9dpz0d-3000.inc1.devtunnels.ms/add-additional-project",
           {
             method: "POST",
             headers: {
@@ -245,7 +245,7 @@
           window.location.href = url; // Redirect to the checkout URL
         } else {
           window.location.href =
-            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel";
+            "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel";
         }
       });
 
@@ -258,7 +258,7 @@
         console.log("subId in the additional credit plan \n", subId);
         console.log("newPriceId in the additional credit plan \n", newPriceId);
         const response = await fetch(
-          "https://vbpflfwp-3000.inc1.devtunnels.ms/add-additional-credit",
+          "https://6f9dpz0d-3000.inc1.devtunnels.ms/add-additional-credit",
           {
             method: "POST",
             headers: {
@@ -273,10 +273,10 @@
         if (response.ok) {
           const result = await response.json();
           window.location.href =
-            "https://vbpflfwp-3000.inc1.devtunnels.ms/success-additional-credit";
+            "https://6f9dpz0d-3000.inc1.devtunnels.ms/success-additional-credit";
         } else {
           window.location.href =
-            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel-additional-credit";
+            "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel-additional-credit";
         }
       });
     </script>

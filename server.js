@@ -120,7 +120,7 @@ app.post("/customer/free-subscription", async (req, res) => {
     const { name, email } = req.body;
     const response = await createCustomerWithoutPayment(name, email);
     return res.status(200).send({ message: "success", response });
-  } catch (e) {}
+  } catch (e) { }
 });
 
 app.get("/success", (req, res) => {
@@ -151,43 +151,62 @@ app.post("/upgrade-subscription", async (req, res) => {
       customer: customerId,
       status: "active",
     });
+
     console.log("subscriptions is \n", JSON.stringify(subscriptions, null, 2));
     if (subscriptions.data.length === 0) {
       throw new Error("No active subscription found for the customer.");
     }
 
-    const subscription = subscriptions.data[0];
+    // const subscription = subscriptions.data[0];
     // Get the current subscription item id for the preview the proration amount
-    const subscriptionItemId = subscription.items.data[0].id;
+    // const subscriptionItemId = subscription.items.data[0].id;
+
+    const subscriptionItemId = subscriptions.data.filter(item => item.subscription === "sub_1POI1uSGVFR9zdBLHo61MSKm")[0];
+    console.log("subscriptionItemId is \n", subscriptionItemId);
     // Retrieve upcoming invoice to calculate proration
+
+    // step = 1 => make subscription_items array with all existing subscription item id and the new priceId with its quantity which we want to apply 
+
+    // TODO: consider the one case for the like if forever plan with add on plan 
+
+    // step = 2 => also make one array of object {id: subscriptionItemId,deleted: true} like we have to track records of all subscription item ids so at the time of upgrade we can delete it.
+
+    // step = 3 => make also an array with newPriceId so we can update it in the upgrade-success
+
     const prorationDate = Math.floor(Date.now() / 1000);
     const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
       customer: customerId,
-      subscription: subscription.id,
+      subscription: "sub_1POI1uSGVFR9zdBLHo61MSKm",
       subscription_items: [
         {
-          id: subscriptionItemId,
-          price: newPriceId, // Switch to new price
+          id: "si_QElZl70w6VyBQl",
+          price: "price_1PO0NbSGVFR9zdBLQAJnbYcu", // basic to standard_per_day
         },
+        {
+          id: "si_QEnGKNLwmNHYVe",
+          price: "price_1POJOUSGVFR9zdBLa99mrsGg" // basic to standard_per_day179
+        }
       ],
       subscription_proration_date: prorationDate,
     });
-    console.log(
-      "upcoming invoice is \n",
-      JSON.stringify(upcomingInvoice, null, 2)
-    );
+
+    console.log("upcomingInvoice is \n", JSON.stringify(upcomingInvoice, null, 2));
+    // console.log(
+    //   "upcoming invoice is \n",
+    //   JSON.stringify(upcomingInvoice, null, 2)
+    // );
     // Calculate the proration amount
-    let prorationAmount;
-    if (
-      upcomingInvoice.lines.data.length === 1 &&
-      upcomingInvoice.lines.data[0].proration === false
-    ) {
-      prorationAmount = upcomingInvoice.lines.data[0].amount;
-    } else {
-      prorationAmount = upcomingInvoice.lines.data
-        .filter((line) => line.proration)
-        .reduce((total, line) => total + line.amount, 0);
-    }
+    // let prorationAmount;
+    // if (
+    //   upcomingInvoice.lines.data.length === 1 &&
+    //   upcomingInvoice.lines.data[0].proration === false
+    // ) {
+    //   prorationAmount = upcomingInvoice.lines.data[0].amount;
+    // } else {
+    //   prorationAmount = upcomingInvoice.lines.data
+    //     .filter((line) => line.proration)
+    //     .reduce((total, line) => total + line.amount, 0);
+    // }
     console.log("Total proration amount is", prorationAmount);
 
     // const line_items = [
@@ -215,8 +234,8 @@ app.post("/upgrade-subscription", async (req, res) => {
     //   // cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
 
     //   // urls for dell
-    //   success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
-    //   cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
+    //   success_url: `https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
+    //   cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
     // });
 
     // res.send({ url: session.url });
@@ -358,7 +377,7 @@ app.get("/success-additional-credit", async (req, res) => {
 app.get("/cancel-additional-credit", async (req, res) => {
   res.send({ message: "Error in the add new credit plan" });
 });
-app.post("/add-on-credits", async (req, res) => {});
+app.post("/add-on-credits", async (req, res) => { });
 app.get("/ping", (req, res) => {
   res.json({ ping: "pong" });
 });
