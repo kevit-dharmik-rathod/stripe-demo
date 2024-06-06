@@ -52,13 +52,24 @@ app.post(
 
     switch (event.type) {
       case "checkout.session.completed":
-        // const session = event.data.object;
-        // const subscription = await stripe.subscriptions.retrieve(
-        //   session.subscription
-        // );
-        // const invoice = await stripe.invoices.retrieve(
-        //   subscription.latest_invoice
-        // );
+        const session = event.data.object;
+        const subscription = await stripe.subscriptions.retrieve(
+          session.subscription
+        );
+        let updatedSubscriptionItem;
+        if (session.metadata.subType === "normal") {
+          console.log("Entered in to the session completed if condition \n");
+          const subscriptionItemId = subscription.items.data[0].id;
+          updatedSubscriptionItem = await stripe.subscriptionItems.update(
+            subscriptionItemId,
+            {
+              metadata: {
+                subType: "normal",
+              },
+            }
+          );
+        }
+        console.log("updatedSubscriptionItem is \n", updatedSubscriptionItem);
         break;
       case "checkout.session.async_payment_failed":
         break;
@@ -108,10 +119,20 @@ async function createCheckoutSession(cId, priceId) {
         quantity: 1,
       },
     ],
+    subscription_data: {
+      metadata: {
+        subType: "normal",
+      },
+    },
+    metadata: {
+      subType: "normal",
+    },
     mode: "subscription",
     success_url: "http://localhost:3000/success",
     cancel_url: "http://localhost:3000/cancel",
   });
+
+  console.log();
   return session.url;
 }
 
@@ -120,7 +141,7 @@ app.post("/customer/free-subscription", async (req, res) => {
     const { name, email } = req.body;
     const response = await createCustomerWithoutPayment(name, email);
     return res.status(200).send({ message: "success", response });
-  } catch (e) { }
+  } catch (e) {}
 });
 
 app.get("/success", (req, res) => {
@@ -144,53 +165,97 @@ app.post("/create-subscription", async (req, res) => {
 
 app.post("/upgrade-subscription", async (req, res) => {
   try {
-    const { customerId, newPriceId } = req.body;
+    const { customerId, subId, newSubPriceId, newAddOnPriceId } = req.body;
 
-    // Get the current subscription
-    const subscriptions = await stripe.subscriptions.list({
+    // step = 1 get an active subscription
+    const activeSubscription = await stripe.subscriptions.retrieve(subId);
+
+    if (!activeSubscription) {
+      throw new Error(`No subscription found with this id: ${subId}`);
+    }
+
+    const price = newAddOnPriceId
+      ? await stripe.prices.retrieve(newAddOnPriceId)
+      : undefined;
+    console.log("price is \n", JSON.stringify(price, null, 2));
+    let quantity;
+    let addOnTotal;
+    const subscription_details = [];
+    // step 2 make subscription_details array
+    activeSubscription.items.data.map((item) => {
+      if (item.metadata.subType === "normal") {
+        subscription_details.push({
+          id: item.id,
+          price: newSubPriceId,
+          quantity: item.quantity,
+        });
+      }
+      if (item.metadata.subType === "add-ons") {
+        quantity = item.quantity;
+      }
+    });
+    addOnTotal = price ? quantity * price.unit_amount_decimal : 0;
+    console.log("addOnTotal is \n", addOnTotal);
+    const prorationDate = Math.floor(Date.now() / 1000);
+
+    const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
       customer: customerId,
-      status: "active",
+      subscription: subId,
+      subscription_details: {
+        items: subscription_details,
+      },
     });
 
-    console.log("subscriptions is \n", JSON.stringify(subscriptions, null, 2));
-    if (subscriptions.data.length === 0) {
-      throw new Error("No active subscription found for the customer.");
-    }
+    console.log(
+      "upcoming invoice is \n",
+      JSON.stringify(upcomingInvoice, null, 2)
+    );
+
+    const prorationAmount =
+      upcomingInvoice.lines.data
+        .filter((line) => line.proration)
+        .reduce((total, line) => total + line.amount, 0) + addOnTotal;
+    console.log("Total proration amount is", prorationAmount);
+    // console.log(
+    //   "Proration amount + newAddons price",
+    //   prorationAmount + addOnTotal
+    // );
+    // calculate the proration amount
+
+    // Get the current subscription
+    // const subscriptions = await stripe.subscriptions.list({
+    //   customer: customerId,
+    //   status: "active",
+    // });
+
+    // console.log("subscriptions is \n", JSON.stringify(subscriptions, null, 2));
+    // if (subscriptions.data.length === 0) {
+    //   throw new Error("No active subscription found for the customer.");
+    // }
 
     // const subscription = subscriptions.data[0];
     // Get the current subscription item id for the preview the proration amount
     // const subscriptionItemId = subscription.items.data[0].id;
 
-    const subscriptionItemId = subscriptions.data.filter(item => item.subscription === "sub_1POI1uSGVFR9zdBLHo61MSKm")[0];
-    console.log("subscriptionItemId is \n", subscriptionItemId);
+    // const subscriptionItemId = subscriptions.data.filter(item => item.subscription === "sub_1POI1uSGVFR9zdBLHo61MSKm")[0];
+    // console.log("subscriptionItemId is \n", subscriptionItemId);
+
     // Retrieve upcoming invoice to calculate proration
 
-    // step = 1 => make subscription_items array with all existing subscription item id and the new priceId with its quantity which we want to apply 
+    // step = 1 => make subscription_items array with all existing subscription item id and the new priceId with its quantity which we want to apply
 
-    // TODO: consider the one case for the like if forever plan with add on plan 
+    // TODO: consider the one case for the like if forever plan with add on plan
 
     // step = 2 => also make one array of object {id: subscriptionItemId,deleted: true} like we have to track records of all subscription item ids so at the time of upgrade we can delete it.
 
     // step = 3 => make also an array with newPriceId so we can update it in the upgrade-success
 
-    const prorationDate = Math.floor(Date.now() / 1000);
-    const upcomingInvoice = await stripe.invoices.retrieveUpcoming({
-      customer: customerId,
-      subscription: "sub_1POI1uSGVFR9zdBLHo61MSKm",
-      subscription_items: [
-        {
-          id: "si_QElZl70w6VyBQl",
-          price: "price_1PO0NbSGVFR9zdBLQAJnbYcu", // basic to standard_per_day
-        },
-        {
-          id: "si_QEnGKNLwmNHYVe",
-          price: "price_1POJOUSGVFR9zdBLa99mrsGg" // basic to standard_per_day179
-        }
-      ],
-      subscription_proration_date: prorationDate,
-    });
+    // const prorationDate = Math.floor(Date.now() / 1000);
 
-    console.log("upcomingInvoice is \n", JSON.stringify(upcomingInvoice, null, 2));
+    // console.log(
+    //   "upcomingInvoice is \n",
+    //   JSON.stringify(upcomingInvoice, null, 2)
+    // );
     // console.log(
     //   "upcoming invoice is \n",
     //   JSON.stringify(upcomingInvoice, null, 2)
@@ -207,7 +272,7 @@ app.post("/upgrade-subscription", async (req, res) => {
     //     .filter((line) => line.proration)
     //     .reduce((total, line) => total + line.amount, 0);
     // }
-    console.log("Total proration amount is", prorationAmount);
+    // console.log("Total proration amount is", prorationAmount);
 
     // const line_items = [
     //   {
@@ -230,15 +295,17 @@ app.post("/upgrade-subscription", async (req, res) => {
     //   customer: customerId,
     //   line_items,
     //   // urls for hp
-    //   // success_url: `https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
-    //   // cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
+    //   // success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
+    //   // cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
 
     //   // urls for dell
-    //   success_url: `https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
-    //   cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
+    //   success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-success/success?customerId=${customerId}&subscriptionId=${subscription.id}&newPriceId=${newPriceId}&subscriptionItemId=${subscriptionItemId}`,
+    //   cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
     // });
 
     // res.send({ url: session.url });
+
+    res.send({ message: "Success" });
   } catch (e) {
     console.log(e);
     res.status(400).send({ error: e.message });
@@ -350,19 +417,65 @@ app.post("/add-additional-project", async (req, res) => {
 
 app.post("/add-additional-credit", async (req, res) => {
   try {
-    const { subId, newPriceId } = req.body;
+    const { subId, newPriceId, quantity } = req.body;
     const subscription = await stripe.subscriptions.retrieve(subId);
     if (!subscription) {
       throw new Error(`No subscription found with this id: ${subId}`);
     }
+    const price = await stripe.prices.retrieve(newPriceId);
+
+    const line_items = [
+      {
+        price_data: {
+          currency: subscription.currency,
+          unit_amount_decimal: price.unit_amount_decimal,
+          product_data: {
+            name: "Proration Add on product",
+            description: "proration add on product charges",
+            images: [],
+            metadata: {
+              subType: "add-ons",
+            },
+          },
+        },
+        quantity,
+      },
+    ];
+    console.log(
+      `https://vbpflfwp-3000.inc1.devtunnels.ms/additional-credit/success?subId=${subId}&newPriceId=${newPriceId}&quantity=${quantity}`
+    );
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      customer: subscription.customer,
+      line_items,
+      success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/additional-credit/success?subId=${subId}&newPriceId=${newPriceId}&quantity=${quantity}`,
+      cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
+    });
+    console.log("session is \n", session.url);
+    res.send({ url: session.url });
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+app.get("/additional-credit/success", async (req, res) => {
+  console.log("req.query", req.query);
+  //TODO: make sure first payment done after that we can update the plan with new add ons to the next billing cycle
+  try {
+    console.log("Entered in to the /additional-credit/success \n");
+    const { subId, newPriceId, quantity } = req.query;
     const updatedSubscription = await stripe.subscriptions.update(subId, {
       items: [
         {
           price: newPriceId,
-          quantity: 1,
+          quantity,
+          metadata: {
+            subType: "add-ons",
+          },
         },
       ],
-      proration_behavior: "always_invoice",
+      proration_behavior: "none",
     });
     return res.status(200).send({ message: "success", updatedSubscription });
   } catch (e) {
@@ -370,14 +483,12 @@ app.post("/add-additional-credit", async (req, res) => {
   }
 });
 
-app.get("/success-additional-credit", async (req, res) => {
-  res.send({ message: "SuccessFully add on new credit plan" });
-});
-
 app.get("/cancel-additional-credit", async (req, res) => {
   res.send({ message: "Error in the add new credit plan" });
 });
-app.post("/add-on-credits", async (req, res) => { });
+
+app.post("/add-on-credits", async (req, res) => {});
+
 app.get("/ping", (req, res) => {
   res.json({ ping: "pong" });
 });
