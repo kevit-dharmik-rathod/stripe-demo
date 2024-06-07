@@ -1,0 +1,15 @@
+Free_Forever_Per_Day = price_1PO0QRSGVFR9zdBLWFEl7fl8
+
+Basic_Per_Day = price_1PO0M0SGVFR9zdBLJKvtemwW
+
+Standard_Per_Day = price_1PO0NbSGVFR9zdBLQAJnbYcu
+
+Premium_Per_Day = price_1PO0RKSGVFR9zdBL2tS0N2kP
+
+add_credit_free_plan_20_per_day = price_1POJMCSGVFR9zdBLVDRtwpOD
+
+add_credit_basic_plan_19_per_day = price_1POJN8SGVFR9zdBLih02bpCw
+
+add_credit_standard_plan_13_per_day = price_1POJOUSGVFR9zdBLa99mrsGg
+
+add_credit_premium_plan_12_per_day = price_1POJPMSGVFR9zdBLnDd79E86
