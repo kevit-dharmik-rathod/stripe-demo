@@ -58,7 +58,6 @@ app.post(
         );
         let updatedSubscriptionItem;
         if (session.metadata.subType === "normal") {
-          console.log("Entered in to the session completed if condition \n");
           const subscriptionItemId = subscription.items.data[0].id;
           updatedSubscriptionItem = await stripe.subscriptionItems.update(
             subscriptionItemId,
@@ -69,7 +68,6 @@ app.post(
             }
           );
         }
-        console.log("updatedSubscriptionItem is \n", updatedSubscriptionItem);
         break;
       case "checkout.session.async_payment_failed":
         break;
@@ -114,8 +112,8 @@ async function createCheckoutSession(cId, priceId) {
         subType: "normal",
       },
       mode: "subscription",
-      success_url: "http://localhost:3000/success",
-      cancel_url: "http://localhost:3000/cancel",
+      success_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/success",
+      cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
     });
 
     return session.url;
@@ -158,12 +156,12 @@ app.post("/upgrade-subscription", async (req, res) => {
   try {
     const { customerId, subId, newSubPriceId, newAddOnPriceId } = req.body;
     console.log("customerId: " + customerId);
-    console.log("subId is\n", subId);
+    console.log("subId is\n", typeof subId);
     console.log("newSubPriceId is\n", newSubPriceId);
     console.log("newADDOnPriceId is\n", newAddOnPriceId);
 
     // case-1 if user have not any subscription
-    if (!subId) {
+    if (subId.trim() === "") {
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         mode: "subscription",
@@ -174,14 +172,17 @@ app.post("/upgrade-subscription", async (req, res) => {
             quantity: 1,
           },
         ],
+        metadata: {
+          subType: "normal",
+        },
         subscription_data: {
           metadata: {
             subType: "normal",
           },
         },
         success_url:
-          "https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-new-subscription/success",
-        cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
+          "https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-new-subscription/success",
+        cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
       });
       console.log("session.url is \n", session.url);
       return res.send({ url: session.url });
@@ -211,6 +212,7 @@ app.post("/upgrade-subscription", async (req, res) => {
     activeSubscription.items.data.map((item) => {
       if (item.metadata.subType === "normal") {
         updateSubArray.push({ id: item.id, deleted: true });
+        updateSubArray.push({ price: newSubPriceId, quantity: 1 })
         subscription_details.push({
           id: item.id,
           price: newSubPriceId,
@@ -219,16 +221,16 @@ app.post("/upgrade-subscription", async (req, res) => {
       }
       if (item.metadata.subType === "add-ons") {
         updateSubArray.push({ id: item.id, deleted: true });
+        updateSubArray.push({ price: newAddOnPriceId, quantity: item.quantity });
         quantity = item.quantity;
       }
     });
     console.log("subscription_details is \n", subscription_details);
 
-    updateSubArray.push({ price: newSubPriceId, quantity: 1 });
 
-    if (newAddOnPriceId) {
-      updateSubArray.push({ id: newAddOnPriceId, quantity });
-    }
+    // if (newAddOnPriceId) {
+    //   updateSubArray.push({ id: newAddOnPriceId, quantity });
+    // }
     addOnTotal = price ? quantity * price.unit_amount_decimal : 0;
     console.log("addOnTotal is \n", addOnTotal);
 
@@ -243,12 +245,18 @@ app.post("/upgrade-subscription", async (req, res) => {
       "upcomingInvoice is \n",
       JSON.stringify(upcomingInvoice, null, 2)
     );
-    const prorationAmount =
-      upcomingInvoice.lines.data.length === 0
-        ? upcomingInvoice.lines.data.amount + addOnTotal
-        : upcomingInvoice.lines.data
+
+    let prorationAmount;
+    if (upcomingInvoice.lines.data.length === 1) {
+      prorationAmount = upcomingInvoice.lines.data[0].amount;
+    } else {
+      prorationAmount =
+        upcomingInvoice.lines.data.length === 0
+          ? upcomingInvoice.lines.data.amount + addOnTotal
+          : upcomingInvoice.lines.data
             .filter((line) => line.proration)
             .reduce((total, line) => total + line.amount, 0) + addOnTotal;
+    }
     console.log("Total proration amount is", prorationAmount);
 
     const line_items = [
@@ -265,20 +273,18 @@ app.post("/upgrade-subscription", async (req, res) => {
       },
     ];
 
-    console.log("before encoded updateSubArray\n", updateSubArray);
-    //encoded the data
-    const encodedUpdateSubArray = encodeURIComponent(
-      JSON.stringify(updateSubArray)
-    );
-    console.log("after encoded updateSubArray\n", encodedUpdateSubArray);
+    updateSubArray.push({ subId });
     // Create a Checkout Session for the immediate proration amount
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
       customer: customerId,
       line_items,
-      success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-success/success?subId=${subId}&encodedUpdateSubArray=${encodedUpdateSubArray}`,
-      cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
+      success_url: `https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-payment-success/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
+      metadata: {
+        updateSubArray: JSON.stringify(updateSubArray)  // Serialize the updateSubArray
+      }
     });
 
     res.send({ url: session.url });
@@ -288,18 +294,29 @@ app.post("/upgrade-subscription", async (req, res) => {
   }
 });
 
-app.get("/upgrade-new-subscription/success", async (req, res) => {
-  res.send({ message: "Successfully upgrade and create new subscription\n" });
-});
-
 app.get("/upgrade-payment-success/success", async (req, res) => {
-  const { subId, updateSubArray } = req.query;
-  console.log("subId updateSubArray", subId, updateSubArray);
-  const decodedUpdateSubArray = JSON.parse(decodeURIComponent(updateSubArray));
-  console.log("decodedUpdateSubArray is \n", decodedUpdateSubArray);
+  const { session_id } = req.query;
+  const session = await stripe.checkout.sessions.retrieve(session_id);
+  const updateSubArray = JSON.parse(session.metadata.updateSubArray);
+  console.log("updateSubArray in the upgrade payment success \n", updateSubArray);
+  let subId;
+  const items = [];
+
+  // Separate subId and other items
+  updateSubArray.forEach(item => {
+    if (item.subId) {
+      subId = item.subId;
+    } else {
+      items.push(item);
+    }
+  });
+
+  console.log("updateSubArray in the upgrade payment success \n", updateSubArray);
+  console.log("Extracted subId: ", subId);
+  console.log("Remaining items: ", items);
   try {
     const subscription = await stripe.subscriptions.update(subId, {
-      items: decodedUpdateSubArray,
+      items: items,
       proration_behavior: "none",
     });
     res.status(200).send({
@@ -311,26 +328,40 @@ app.get("/upgrade-payment-success/success", async (req, res) => {
   }
 });
 
+app.get("/upgrade-new-subscription/success", async (req, res) => {
+  res.send({ message: "Successfully upgrade and create new subscription\n" });
+});
+
 app.post("/downgrade-subscription", async (req, res) => {
   try {
-    const { customerId, newPriceId } = req.body;
+    const { newAddOnPriceId, newPriceId, subId } = req.body;
 
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: "active",
-      limit: 1,
+    const activeSubscription = await stripe.subscriptions.retrieve(subId);
+    let addOnsQuantity;
+    activeSubscription.items.data.map((item) => {
+      if (item.metadata.subType === "add-ons") {
+        addOnsQuantity = item.quantity;
+      }
     });
 
-    if (subscriptions.data.length === 0) {
-      throw new Error("No active subscription found for the customer.");
-    }
-
-    const subscriptionId = subscriptions.data[0].id;
-    const oldPriceId = subscriptions.data[0].plan.id;
-
+    const items = addOnsQuantity ? [
+      {
+        price: newPriceId,
+        quantity: 1,
+      },
+      {
+        price: newAddOnPriceId,
+        quantity: addOnsQuantity
+      }
+    ] : [{
+      price: newPriceId,
+      quantity: 1,
+    }]
     const subscriptionSchedule = await stripe.subscriptionSchedules.create({
-      from_subscription: subscriptionId,
+      from_subscription: subId,
     });
+
+    console.log("subscriptionSchedule is \n", JSON.stringify(subscriptionSchedule, null, 2));
 
     const phases = subscriptionSchedule.phases.map((phase) => ({
       start_date: phase.start_date,
@@ -345,12 +376,7 @@ app.post("/downgrade-subscription", async (req, res) => {
         phases: [
           ...phases,
           {
-            items: [
-              {
-                price: newPriceId,
-                quantity: 1,
-              },
-            ],
+            items,
             proration_behavior: "none",
           },
         ],
@@ -359,7 +385,7 @@ app.post("/downgrade-subscription", async (req, res) => {
 
     res.status(200).send({
       message: "create schedule for downgrade subscription successfully",
-      downgradeSubscription,
+      downgradeSubscription
     });
   } catch (e) {
     console.log(e);
@@ -391,60 +417,72 @@ app.post("/add-additional-project", async (req, res) => {
 
 app.post("/add-additional-credit", async (req, res) => {
   try {
-    const { customerId, newPriceId, quantity, subId } = req.body;
+    let { customerId, newPriceId, quantity, subId } = req.body;
+    console.log("customerId and typeof ", customerId, typeof customerId);
+    console.log("newPriceId and typeof ", newPriceId, typeof newPriceId);
+    console.log("quantity and type of quantity is ", quantity, typeof quantity);
+    console.log("subId is and typeof subId is ", subId, typeof subId);
 
-    const subscription = subId
-      ? await stripe.subscriptions.retrieve(subId)
-      : undefined;
-    console.log("customerId is \n", customerId);
-    console.log("newPriceId is \n", newPriceId);
-    console.log("quantity is \n", quantity);
-    console.log("subscriptions is\n", subId);
+    let subscription;
+    if (subId.trim() === "") {
+      subId = "not-defined";
+    } else {
+      subscription = await stripe.subscriptions.retrieve(subId);
+    }
 
-    let paymentMode = subscription ? "payment" : "subscription";
+    console.log("subscription is \n", subscription);
+    let paymentMode = subId === "not-defined" ? "subscription" : "payment";
 
     console.log("mode is \n", paymentMode);
     const price = await stripe.prices.retrieve(newPriceId);
     const subscription_data =
       paymentMode === "subscription"
         ? {
-            metadata: {
-              subType: "add-ons",
-            },
-          }
+          metadata: {
+            subType: "add-ons",
+          },
+        }
         : {};
     console.log("subscription_data\n", subscription_data);
     const line_items =
       paymentMode === "subscription"
         ? [{ price: newPriceId, quantity }]
         : [
-            {
-              price_data: {
-                currency: price.currency,
-                unit_amount_decimal: price.unit_amount_decimal,
-                product_data: {
-                  name: "Proration Add on product",
-                  description: "proration add on product charges",
-                  images: [],
-                  metadata: {
-                    subType: "add-ons",
-                  },
+          {
+            price_data: {
+              currency: price.currency,
+              unit_amount_decimal: price.unit_amount_decimal,
+              product_data: {
+                name: "Proration Add on product",
+                description: "proration add on product charges",
+                images: [],
+                metadata: {
+                  subType: "add-ons",
                 },
               },
-              quantity,
             },
-          ];
+            quantity,
+          },
+        ];
+
     console.log("line_items", line_items);
+    const metadata = {
+      newPriceId,
+      quantity,
+      paymentMode,
+      subId,
+    };
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: paymentMode,
       customer: customerId,
       line_items,
       subscription_data,
-      success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/additional-credit/success?newPriceId=${newPriceId}&quantity=${quantity}&paymentMode=${paymentMode}&subId=${subId}`,
-      cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
+      metadata,
+      success_url: `https://6f9dpz0d-3000.inc1.devtunnels.ms/additional-credit/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
     });
-    console.log("session is \n", session.url);
+    console.log("session is \n", session);
     res.send({ url: session.url });
   } catch (e) {
     console.log(e);
@@ -452,17 +490,18 @@ app.post("/add-additional-credit", async (req, res) => {
 });
 
 app.get("/additional-credit/success", async (req, res) => {
-  console.log("req.query", req.query);
   try {
-    console.log("Entered into the /additional-credit/success \n");
-    const { newPriceId, quantity, paymentMode, subId } = req.query;
-
+    const { session_id } = req.query;
+    const session = await stripe.checkout.sessions.retrieve(session_id);
+    const { newPriceId, quantity, paymentMode, subId } = session.metadata;
     if (paymentMode === "payment") {
       console.log("entered in to the if condition\n");
       const subscription = await stripe.subscriptions.retrieve(subId);
+      console.log("subscription is \n", JSON.stringify(subscription, null, 2));
       const existingItem = subscription.items.data.find(
         (item) => item.price.id === newPriceId
       );
+      console.log("existing item is \n", JSON.stringify(existingItem, null, 2));
       if (existingItem) {
         // Update the quantity of the existing subscription item
         const updatedSubscription = await stripe.subscriptions.update(subId, {
@@ -479,6 +518,7 @@ app.get("/additional-credit/success", async (req, res) => {
           .send({ message: "success", updatedSubscription });
       } else {
         // Add a new subscription item
+        console.log("Entered in to the else condition \n");
         const updatedSubscription = await stripe.subscriptions.update(subId, {
           items: [
             {
@@ -510,7 +550,63 @@ app.get("/cancel-additional-credit", async (req, res) => {
   res.send({ message: "Error in the add new credit plan" });
 });
 
-app.post("/add-on-credits", async (req, res) => {});
+app.post("/cancel-subscription", async (req, res) => {
+  try {
+    const { subId } = req.body;
+
+    // const activeSubscription = await stripe.subscriptions.retrieve(subId);
+    // let addOnsQuantity;
+    // activeSubscription.items.data.map((item) => {
+    //   if (item.metadata.subType === "add-ons") {
+    //     addOnsQuantity = item.quantity;
+    //   }
+    // });
+
+    // const items = addOnsQuantity ? [
+    //   {
+    //     price: newPriceId,
+    //     quantity: 1,
+    //   },
+    //   {
+    //     price: newAddOnPriceId,
+    //     quantity: addOnsQuantity
+    //   }
+    // ] : [{
+    //   price: newPriceId,
+    //   quantity: 1,
+    // }]
+    const subscriptionSchedule = await stripe.subscriptionSchedules.create({
+      from_subscription: subId,
+    });
+
+    console.log("subscriptionSchedule is \n", JSON.stringify(subscriptionSchedule, null, 2));
+
+    const phases = subscriptionSchedule.phases.map((phase) => ({
+      start_date: phase.start_date,
+      end_date: phase.end_date,
+      items: phase.items,
+    }));
+
+    const downgradeSubscription = await stripe.subscriptionSchedules.update(
+      subscriptionSchedule.id,
+      {
+        end_behavior: "cancel",
+        phases: [
+          ...phases,
+        ],
+      }
+    );
+
+    res.status(200).send({
+      message: "create schedule for downgrade subscription successfully",
+      downgradeSubscription
+    });
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+app.post("/add-on-credits", async (req, res) => { });
 
 app.get("/ping", (req, res) => {
   res.json({ ping: "pong" });
