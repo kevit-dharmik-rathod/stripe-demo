@@ -16,9 +16,19 @@
 
     <h1>Subscribe to a Plan</h1>
     <form id="subscription-form">
-      <input type="text" id="name" placeholder="Enter your name" required />
-      <input type="email" id="email" placeholder="Enter your email" required />
-      <select id="plan">
+      <input
+        type="text"
+        id="subscribe-name"
+        placeholder="Enter your name"
+        required
+      />
+      <input
+        type="email"
+        id="subscribe-email"
+        placeholder="Enter your email"
+        required
+      />
+      <select id="subscribe-plan">
         <option value="price_1PNDhjSGVFR9zdBLFta7Z9r1">Free Forever</option>
         <option value="price_1PNDidSGVFR9zdBLiQYD9zuM">Basic Plan</option>
         <option value="price_1PNDjUSGVFR9zdBLSB97meZm">Standard Plan</option>
@@ -73,7 +83,7 @@
         id="downgrade-addOnPriceId"
         placeholder="Enter new addOnPriceId"
       />
-       <input
+      <input
         type="text"
         id="downgrade-sub-id"
         placeholder="Enter Subscription id"
@@ -153,7 +163,7 @@
       <button type="submit">Subscribe</button>
     </form>
 
-    <h1>Cancel the subscription </h1>
+    <h1>Cancel the subscription</h1>
     <form id="cancel-form">
       <input
         type="text"
@@ -184,7 +194,7 @@
         const email = document.getElementById("email").value;
         console.log("name and email", name, email);
         const response = await fetch(
-          "https://6f9dpz0d-3000.inc1.devtunnels.ms/customer/add",
+          "https://vbpflfwp-3000.inc1.devtunnels.ms/customer/add",
           {
             method: "POST",
             headers: {
@@ -214,11 +224,14 @@
       });
       subscriptionForm.addEventListener("submit", async (event) => {
         event.preventDefault();
-        const name = document.getElementById("name").value;
-        const email = document.getElementById("email").value;
-        const priceId = document.getElementById("plan").value;
+        const name = document.getElementById("subscribe-name").value;
+        const email = document.getElementById("subscribe-email").value;
+        const priceId = document.getElementById("subscribe-plan").value;
+        console.log("frontend name is \n", name);
+        console.log("frontend email is\n", email);
+        console.log("frontend price is \n", priceId);
         const response = await fetch(
-          "https://6f9dpz0d-3000.inc1.devtunnels.ms/create-subscription",
+          "https://vbpflfwp-3000.inc1.devtunnels.ms/create-free-subscription",
           {
             method: "POST",
             headers: {
@@ -231,14 +244,15 @@
             }),
           }
         );
-        const { url } = await response.json(); 
+        // const r= await response.json();
+        return await response.json();
 
-        if (response.ok) {
-          window.location.href = url; // Redirect to the checkout URL
-        } else {
-          window.location.href =
-            "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel";
-        }
+        // if (response.ok) {
+        //   window.location.href = url; // Redirect to the checkout URL
+        // } else {
+        //   window.location.href =
+        //     "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel";
+        // }
       });
 
       upgradeForm.addEventListener("submit", async (event) => {
@@ -255,7 +269,7 @@
         console.log("newSubPriceId is\n", newSubPriceId);
         console.log("newADDOnPriceId is\n", newAddOnPriceId);
         const response = await fetch(
-          "https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-subscription",
+          "https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-subscription",
           {
             method: "POST",
             headers: {
@@ -275,7 +289,7 @@
           window.location.href = url;
         } else {
           window.location.href =
-            "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel";
+            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel";
         }
       });
 
@@ -288,7 +302,7 @@
         const subId = document.getElementById("downgrade-sub-id").value;
         try {
           const response = await fetch(
-            "https://6f9dpz0d-3000.inc1.devtunnels.ms/downgrade-subscription",
+            "https://vbpflfwp-3000.inc1.devtunnels.ms/downgrade-subscription",
             {
               method: "POST",
               headers: {
@@ -297,17 +311,17 @@
               body: JSON.stringify({
                 newAddOnPriceId,
                 newPriceId,
-                subId
+                subId,
               }),
             }
           );
           if (response.ok) {
             const result = await response.json();
             window.location.href =
-              "https://6f9dpz0d-3000.inc1.devtunnels.ms/schedule-success";
+              "https://vbpflfwp-3000.inc1.devtunnels.ms/schedule-success";
           } else {
             window.location.href =
-              "https://6f9dpz0d-3000.inc1.devtunnels.ms/schedule-cancel";
+              "https://vbpflfwp-3000.inc1.devtunnels.ms/schedule-cancel";
           }
         } catch (e) {
           console.log("Error in the downgrade frontend: ", e);
@@ -321,7 +335,7 @@
         console.log("customerId in the additionalProjectForm\n", customerId);
         console.log("newPriceId in the additionalProjectForm\n", newPriceId);
         const response = await fetch(
-          "https://6f9dpz0d-3000.inc1.devtunnels.ms/add-additional-project",
+          "https://vbpflfwp-3000.inc1.devtunnels.ms/add-additional-project",
           {
             method: "POST",
             headers: {
@@ -339,7 +353,7 @@
           window.location.href = url; // Redirect to the checkout URL
         } else {
           window.location.href =
-            "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel";
+            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel";
         }
       });
 
@@ -353,7 +367,7 @@
         const subId = document.getElementById("subscriptionId").value;
 
         const response = await fetch(
-          "https://6f9dpz0d-3000.inc1.devtunnels.ms/add-additional-credit",
+          "https://vbpflfwp-3000.inc1.devtunnels.ms/add-additional-credit",
           {
             method: "POST",
             headers: {
@@ -373,7 +387,7 @@
           window.location.href = url;
         } else {
           window.location.href =
-            "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel-additional-credit";
+            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel-additional-credit";
         }
       });
 
@@ -383,24 +397,24 @@
         console.log("subId in the cancel-form", subId);
         try {
           const response = await fetch(
-            "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel-subscription",
+            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel-subscription",
             {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                subId
+                subId,
               }),
             }
           );
           if (response.ok) {
             const result = await response.json();
             window.location.href =
-              "https://6f9dpz0d-3000.inc1.devtunnels.ms/schedule-success";
+              "https://vbpflfwp-3000.inc1.devtunnels.ms/schedule-success";
           } else {
             window.location.href =
-              "https://6f9dpz0d-3000.inc1.devtunnels.ms/schedule-cancel";
+              "https://vbpflfwp-3000.inc1.devtunnels.ms/schedule-cancel";
           }
         } catch (e) {
           console.log("Error in the downgrade frontend: ", e);

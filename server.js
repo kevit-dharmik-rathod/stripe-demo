@@ -53,21 +53,24 @@ app.post(
     switch (event.type) {
       case "checkout.session.completed":
         const session = event.data.object;
-        const subscription = await stripe.subscriptions.retrieve(
-          session.subscription
-        );
-        let updatedSubscriptionItem;
-        if (session.metadata.subType === "normal") {
-          const subscriptionItemId = subscription.items.data[0].id;
-          updatedSubscriptionItem = await stripe.subscriptionItems.update(
-            subscriptionItemId,
-            {
-              metadata: {
-                subType: "normal",
-              },
-            }
+        if (session.subscription) {
+          const subscription = await stripe.subscriptions.retrieve(
+            session.subscription
           );
+          let updatedSubscriptionItem;
+          if (session.metadata.subType === "normal") {
+            const subscriptionItemId = subscription.items.data[0].id;
+            updatedSubscriptionItem = await stripe.subscriptionItems.update(
+              subscriptionItemId,
+              {
+                metadata: {
+                  subType: "normal",
+                },
+              }
+            );
+          }
         }
+
         break;
       case "checkout.session.async_payment_failed":
         break;
@@ -112,8 +115,8 @@ async function createCheckoutSession(cId, priceId) {
         subType: "normal",
       },
       mode: "subscription",
-      success_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/success",
-      cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
+      success_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/success",
+      cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
     });
 
     return session.url;
@@ -121,6 +124,26 @@ async function createCheckoutSession(cId, priceId) {
     console.log(e);
   }
 }
+
+app.post("/create-free-subscription", async (req, res) => {
+  try {
+    const { name, email, priceId } = req.body;
+    console.log("Entered in to the create-free-subscription \n");
+    console.log(name, email, priceId);
+    const customer = await createCustomer(name, email);
+    const subscription = await stripe.subscriptions.create({
+      customer: customer.id,
+      items: [
+        {
+          price: priceId,
+        },
+      ],
+    });
+    res.send({ message: "Success", subscription });
+  } catch (e) {
+    throw new Error(e);
+  }
+});
 
 app.post("/customer/add", async (req, res) => {
   try {
@@ -181,8 +204,8 @@ app.post("/upgrade-subscription", async (req, res) => {
           },
         },
         success_url:
-          "https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-new-subscription/success",
-        cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
+          "https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-new-subscription/success",
+        cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
       });
       console.log("session.url is \n", session.url);
       return res.send({ url: session.url });
@@ -212,7 +235,7 @@ app.post("/upgrade-subscription", async (req, res) => {
     activeSubscription.items.data.map((item) => {
       if (item.metadata.subType === "normal") {
         updateSubArray.push({ id: item.id, deleted: true });
-        updateSubArray.push({ price: newSubPriceId, quantity: 1 })
+        updateSubArray.push({ price: newSubPriceId, quantity: 1 });
         subscription_details.push({
           id: item.id,
           price: newSubPriceId,
@@ -221,12 +244,14 @@ app.post("/upgrade-subscription", async (req, res) => {
       }
       if (item.metadata.subType === "add-ons") {
         updateSubArray.push({ id: item.id, deleted: true });
-        updateSubArray.push({ price: newAddOnPriceId, quantity: item.quantity });
+        updateSubArray.push({
+          price: newAddOnPriceId,
+          quantity: item.quantity,
+        });
         quantity = item.quantity;
       }
     });
     console.log("subscription_details is \n", subscription_details);
-
 
     // if (newAddOnPriceId) {
     //   updateSubArray.push({ id: newAddOnPriceId, quantity });
@@ -254,8 +279,8 @@ app.post("/upgrade-subscription", async (req, res) => {
         upcomingInvoice.lines.data.length === 0
           ? upcomingInvoice.lines.data.amount + addOnTotal
           : upcomingInvoice.lines.data
-            .filter((line) => line.proration)
-            .reduce((total, line) => total + line.amount, 0) + addOnTotal;
+              .filter((line) => line.proration)
+              .reduce((total, line) => total + line.amount, 0) + addOnTotal;
     }
     console.log("Total proration amount is", prorationAmount);
 
@@ -280,11 +305,11 @@ app.post("/upgrade-subscription", async (req, res) => {
       mode: "payment",
       customer: customerId,
       line_items,
-      success_url: `https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-payment-success/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
+      success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-success/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
       metadata: {
-        updateSubArray: JSON.stringify(updateSubArray)  // Serialize the updateSubArray
-      }
+        updateSubArray: JSON.stringify(updateSubArray), // Serialize the updateSubArray
+      },
     });
 
     res.send({ url: session.url });
@@ -298,12 +323,15 @@ app.get("/upgrade-payment-success/success", async (req, res) => {
   const { session_id } = req.query;
   const session = await stripe.checkout.sessions.retrieve(session_id);
   const updateSubArray = JSON.parse(session.metadata.updateSubArray);
-  console.log("updateSubArray in the upgrade payment success \n", updateSubArray);
+  console.log(
+    "updateSubArray in the upgrade payment success \n",
+    updateSubArray
+  );
   let subId;
   const items = [];
 
   // Separate subId and other items
-  updateSubArray.forEach(item => {
+  updateSubArray.forEach((item) => {
     if (item.subId) {
       subId = item.subId;
     } else {
@@ -311,7 +339,10 @@ app.get("/upgrade-payment-success/success", async (req, res) => {
     }
   });
 
-  console.log("updateSubArray in the upgrade payment success \n", updateSubArray);
+  console.log(
+    "updateSubArray in the upgrade payment success \n",
+    updateSubArray
+  );
   console.log("Extracted subId: ", subId);
   console.log("Remaining items: ", items);
   try {
@@ -344,24 +375,31 @@ app.post("/downgrade-subscription", async (req, res) => {
       }
     });
 
-    const items = addOnsQuantity ? [
-      {
-        price: newPriceId,
-        quantity: 1,
-      },
-      {
-        price: newAddOnPriceId,
-        quantity: addOnsQuantity
-      }
-    ] : [{
-      price: newPriceId,
-      quantity: 1,
-    }]
+    const items = addOnsQuantity
+      ? [
+          {
+            price: newPriceId,
+            quantity: 1,
+          },
+          {
+            price: newAddOnPriceId,
+            quantity: addOnsQuantity,
+          },
+        ]
+      : [
+          {
+            price: newPriceId,
+            quantity: 1,
+          },
+        ];
     const subscriptionSchedule = await stripe.subscriptionSchedules.create({
       from_subscription: subId,
     });
 
-    console.log("subscriptionSchedule is \n", JSON.stringify(subscriptionSchedule, null, 2));
+    console.log(
+      "subscriptionSchedule is \n",
+      JSON.stringify(subscriptionSchedule, null, 2)
+    );
 
     const phases = subscriptionSchedule.phases.map((phase) => ({
       start_date: phase.start_date,
@@ -385,7 +423,7 @@ app.post("/downgrade-subscription", async (req, res) => {
 
     res.status(200).send({
       message: "create schedule for downgrade subscription successfully",
-      downgradeSubscription
+      downgradeSubscription,
     });
   } catch (e) {
     console.log(e);
@@ -438,32 +476,32 @@ app.post("/add-additional-credit", async (req, res) => {
     const subscription_data =
       paymentMode === "subscription"
         ? {
-          metadata: {
-            subType: "add-ons",
-          },
-        }
+            metadata: {
+              subType: "add-ons",
+            },
+          }
         : {};
     console.log("subscription_data\n", subscription_data);
     const line_items =
       paymentMode === "subscription"
         ? [{ price: newPriceId, quantity }]
         : [
-          {
-            price_data: {
-              currency: price.currency,
-              unit_amount_decimal: price.unit_amount_decimal,
-              product_data: {
-                name: "Proration Add on product",
-                description: "proration add on product charges",
-                images: [],
-                metadata: {
-                  subType: "add-ons",
+            {
+              price_data: {
+                currency: price.currency,
+                unit_amount_decimal: price.unit_amount_decimal,
+                product_data: {
+                  name: "Proration Add on product",
+                  description: "proration add on product charges",
+                  images: [],
+                  metadata: {
+                    subType: "add-ons",
+                  },
                 },
               },
+              quantity,
             },
-            quantity,
-          },
-        ];
+          ];
 
     console.log("line_items", line_items);
     const metadata = {
@@ -479,8 +517,8 @@ app.post("/add-additional-credit", async (req, res) => {
       line_items,
       subscription_data,
       metadata,
-      success_url: `https://6f9dpz0d-3000.inc1.devtunnels.ms/additional-credit/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
+      success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/additional-credit/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
     });
     console.log("session is \n", session);
     res.send({ url: session.url });
@@ -579,7 +617,10 @@ app.post("/cancel-subscription", async (req, res) => {
       from_subscription: subId,
     });
 
-    console.log("subscriptionSchedule is \n", JSON.stringify(subscriptionSchedule, null, 2));
+    console.log(
+      "subscriptionSchedule is \n",
+      JSON.stringify(subscriptionSchedule, null, 2)
+    );
 
     const phases = subscriptionSchedule.phases.map((phase) => ({
       start_date: phase.start_date,
@@ -591,22 +632,19 @@ app.post("/cancel-subscription", async (req, res) => {
       subscriptionSchedule.id,
       {
         end_behavior: "cancel",
-        phases: [
-          ...phases,
-        ],
+        phases: [...phases],
       }
     );
 
     res.status(200).send({
       message: "create schedule for downgrade subscription successfully",
-      downgradeSubscription
+      downgradeSubscription,
     });
   } catch (e) {
     console.log(e);
   }
 });
 
-app.post("/add-on-credits", async (req, res) => { });
 
 app.get("/ping", (req, res) => {
   res.json({ ping: "pong" });

@@ -14,12 +14,4 @@ add_credit_standard_plan_13_per_day = price_1POJOUSGVFR9zdBLa99mrsGg
 
 add_credit_premium_plan_12_per_day = price_1POJPMSGVFR9zdBLnDd79E86
 
-metadata is
- {
-  key: [
-    '{"id":"si_QGSSTMojzB9qqg","deleted":true}',
-    '{"id":"si_QGSXy6XerioRZl","deleted":true}',
-    '{"price":"price_1PO0NbSGVFR9zdBLQAJnbYcu","quantity":1}',
-    '{"id":"price_1POJOUSGVFR9zdBLa99mrsGg","quantity":4}'
-  ]
-}
+
