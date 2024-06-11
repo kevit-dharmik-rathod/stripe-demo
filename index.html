@@ -28,12 +28,36 @@
         placeholder="Enter your email"
         required
       />
+      <!-- <input
+        type="number"
+        id="cardNumber"
+        placeholder="Enter cardNumber"
+        required
+      />
+      <input
+        type="number"
+        id="card_exp_month"
+        placeholder="Enter exp month"
+        required
+      />
+      <input
+        type="number"
+        id="card_exp_year"
+        placeholder="Enter exp card_exp_year"
+        required
+      />
+      <input
+        type="number"
+        id="card_cvc"
+        placeholder="Enter card_CVC_Number"
+        required
+      /> -->
       <select id="subscribe-plan">
         <option value="price_1PNDhjSGVFR9zdBLFta7Z9r1">Free Forever</option>
         <option value="price_1PNDidSGVFR9zdBLiQYD9zuM">Basic Plan</option>
         <option value="price_1PNDjUSGVFR9zdBLSB97meZm">Standard Plan</option>
         <option value="price_1PNDk5SGVFR9zdBLcGXUJozR">Premium Plan</option>
-        <option value="price_1PO0QRSGVFR9zdBLWFEl7fl8">
+        <option value="price_1PQOjdCkpDKpVkAaHUZS5Z5F">
           Free_Forever_Per_Day
         </option>
         <option value="price_1PO0M0SGVFR9zdBLJKvtemwW">Basic_Per_Day</option>
@@ -69,8 +93,8 @@
         <option value="price_1PO0QRSGVFR9zdBLWFEl7fl8">
           Free_Forever_Per_Day
         </option>
-        <option value="price_1PO0M0SGVFR9zdBLJKvtemwW">Basic_Per_Day</option>
-        <option value="price_1PO0NbSGVFR9zdBLQAJnbYcu">Standard_Per_Day</option>
+        <option value="price_1PQRLDCkpDKpVkAaPujXeJVE">Basic_Per_Day</option>
+        <option value="price_1PQSOQCkpDKpVkAasCoUWBQC">Standard_Per_Day</option>
         <option value="price_1PO0RKSGVFR9zdBL2tS0N2kP">Premium_Per_Day</option>
       </select>
       <button type="submit">Update</button>
@@ -147,7 +171,8 @@
         required
       />
       <select id="additional-credit-plan-price">
-        <option value="price_1POJMCSGVFR9zdBLVDRtwpOD">
+        <option value="price_1PQPDhCkpDKpVkAadf6s6HPk">
+          <!-- <option value="price_1POJMCSGVFR9zdBLVDRtwpOD"> -->
           add_credit_free_plan_20_per_day
         </option>
         <option value="price_1POJN8SGVFR9zdBLih02bpCw">
@@ -222,11 +247,17 @@
           ).innerText = `Error: ${errorData.error}`;
         }
       });
+
       subscriptionForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         const name = document.getElementById("subscribe-name").value;
         const email = document.getElementById("subscribe-email").value;
         const priceId = document.getElementById("subscribe-plan").value;
+        // const cardNumber = document.getElementById("cardNumber").value;
+        // const card_exp_month = document.getElementById("card_exp_month").value;
+        // const card_exp_year = document.getElementById("card_exp_year").value;
+        // const card_cvc = document.getElementById("card_cvc").value;
+
         console.log("frontend name is \n", name);
         console.log("frontend email is\n", email);
         console.log("frontend price is \n", priceId);
@@ -241,6 +272,10 @@
               name: name,
               email: email,
               priceId: priceId,
+              // cardNumber,
+              // card_exp_month,
+              // card_exp_year,
+              // card_cvc,
             }),
           }
         );
@@ -367,7 +402,7 @@
         const subId = document.getElementById("subscriptionId").value;
 
         const response = await fetch(
-          "https://vbpflfwp-3000.inc1.devtunnels.ms/add-additional-credit",
+          "https://vbpflfwp-3000.inc1.devtunnels.ms/add-additional-credit-new",
           {
             method: "POST",
             headers: {
@@ -387,7 +422,7 @@
           window.location.href = url;
         } else {
           window.location.href =
-            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel-additional-credit";
+            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel-additional-credit-new";
         }
       });
 

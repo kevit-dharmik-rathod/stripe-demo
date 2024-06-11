@@ -138,7 +138,43 @@ app.post("/create-free-subscription", async (req, res) => {
           price: priceId,
         },
       ],
+      metadata: {
+        subType: "normal",
+      },
     });
+    await stripe.subscriptionItems.update(subscription.items.data[0].id, {
+      metadata: {
+        subType: "normal",
+      },
+    });
+    const paymentMethod = await stripe.paymentMethods.create({
+      type: "card",
+      card: { token: "tok_threeDSecure2Required" },
+    });
+    console.log("paymentMethod is \n", JSON.stringify(paymentMethod, null, 2));
+
+    const attachPaymentMethod = await stripe.paymentMethods.attach(
+      paymentMethod.id,
+      {
+        customer: customer.id,
+      }
+    );
+
+    console.log(
+      "attachPaymentMethod is \n",
+      JSON.stringify(attachPaymentMethod, null, 2)
+    );
+
+    const updatedCustomer = await stripe.customers.update(customer.id, {
+      invoice_settings: {
+        default_payment_method: paymentMethod.id,
+      },
+      // default_source: paymentMethod.id,
+    });
+    console.log(
+      "updatedCustomer is \n",
+      JSON.stringify(updatedCustomer, null, 2)
+    );
     res.send({ message: "Success", subscription });
   } catch (e) {
     throw new Error(e);
@@ -179,7 +215,7 @@ app.post("/upgrade-subscription", async (req, res) => {
   try {
     const { customerId, subId, newSubPriceId, newAddOnPriceId } = req.body;
     console.log("customerId: " + customerId);
-    console.log("subId is\n", typeof subId);
+    console.log("subId is\n", subId);
     console.log("newSubPriceId is\n", newSubPriceId);
     console.log("newADDOnPriceId is\n", newAddOnPriceId);
 
@@ -220,7 +256,33 @@ app.post("/upgrade-subscription", async (req, res) => {
     if (!activeSubscription) {
       throw new Error(`No subscription found with this id: ${subId}`);
     }
-
+    console.log(
+      "activeSubscription.items.data[0].id",
+      activeSubscription.items.data[0].id
+    );
+    // case 0 if user has already in the free plan
+    if (
+      activeSubscription.items.data.length === 1 &&
+      activeSubscription.items.data[0].plan.nickname === "free"
+    ) {
+      console.log("Entered in to the case 0 condition \n");
+      const subscription = await stripe.subscriptions.update(subId, {
+        items: [
+          {
+            id: activeSubscription.items.data[0].id,
+            deleted: true,
+          },
+          {
+            price: newSubPriceId,
+            metadata: {
+              subType: "normal",
+            },
+          },
+        ],
+        proration_behavior: "none",
+      });
+      return res.status(200).send({ message: "success", subscription });
+    }
     const price = newAddOnPriceId
       ? await stripe.prices.retrieve(newAddOnPriceId)
       : undefined;
@@ -235,7 +297,13 @@ app.post("/upgrade-subscription", async (req, res) => {
     activeSubscription.items.data.map((item) => {
       if (item.metadata.subType === "normal") {
         updateSubArray.push({ id: item.id, deleted: true });
-        updateSubArray.push({ price: newSubPriceId, quantity: 1 });
+        updateSubArray.push({
+          price: newSubPriceId,
+          quantity: 1,
+          metadata: {
+            subType: "normal",
+          },
+        });
         subscription_details.push({
           id: item.id,
           price: newSubPriceId,
@@ -247,6 +315,9 @@ app.post("/upgrade-subscription", async (req, res) => {
         updateSubArray.push({
           price: newAddOnPriceId,
           quantity: item.quantity,
+          metadata: {
+            subType: "add-ons",
+          },
         });
         quantity = item.quantity;
       }
@@ -338,6 +409,7 @@ app.get("/upgrade-payment-success/success", async (req, res) => {
       items.push(item);
     }
   });
+  console.log("items is \n", items);
 
   console.log(
     "updateSubArray in the upgrade payment success \n",
@@ -588,6 +660,152 @@ app.get("/cancel-additional-credit", async (req, res) => {
   res.send({ message: "Error in the add new credit plan" });
 });
 
+app.post("/add-additional-credit-new", async (req, res) => {
+  try {
+    let { customerId, newPriceId, quantity, subId } = req.body;
+    console.log("customerId and typeof ", customerId, typeof customerId);
+    console.log("newPriceId and typeof ", newPriceId, typeof newPriceId);
+    console.log("quantity and type of quantity is ", quantity, typeof quantity);
+    console.log("subId is and typeof subId is ", subId);
+
+    // handle case 0 when user has free subscription and tries to addons for free
+    const activeSubscription = await stripe.subscriptions.retrieve(subId);
+    console.log(
+      "activeSubscription is \n",
+      JSON.stringify(activeSubscription, null, 2)
+    );
+    if (!activeSubscription) {
+      throw new Error(`No subscription found with this id: ${subId}`);
+    }
+    console.log(
+      "activeSubscription.items.data[0].id",
+      activeSubscription.items.data[0].id
+    );
+    // case 0 if user has already in the free plan
+    if (
+      activeSubscription.items.data.length === 1 &&
+      activeSubscription.items.data[0].plan.nickname === "free"
+    ) {
+      console.log("Entered in to the case 0 condition \n");
+      const subscription = await stripe.subscriptions.update(subId, {
+        items: [
+          {
+            id: activeSubscription.items.data[0].id,
+          },
+          {
+            price: newPriceId,
+            metadata: {
+              subType: "normal",
+            },
+          },
+        ],
+        proration_behavior: "none",
+      });
+      return res.status(200).send({ message: "success", subscription });
+    }
+
+    const price = await stripe.prices.retrieve(newPriceId);
+    const line_items = [
+      {
+        price_data: {
+          currency: price.currency,
+          unit_amount_decimal: price.unit_amount_decimal,
+          product_data: {
+            name: "Proration Add on product",
+            description: "proration add on product charges",
+            images: [],
+            metadata: {
+              subType: "add-ons",
+            },
+          },
+        },
+        quantity,
+      },
+    ];
+
+    console.log("line_items", line_items);
+    const metadata = {
+      newPriceId,
+      quantity,
+      subId,
+    };
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      customer: customerId,
+      line_items,
+      metadata,
+      success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/additional-credit-new/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:
+        "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel-additional-credit-new",
+    });
+    console.log("session is \n", session);
+    res.send({ url: session.url });
+  } catch (e) {
+    console.log(e);
+  }
+});
+
+app.get("/additional-credit-new/success", async (req, res) => {
+  try {
+    const { session_id } = req.query;
+    const session = await stripe.checkout.sessions.retrieve(session_id);
+    const { newPriceId, quantity, subId } = session.metadata;
+
+    const subscription = await stripe.subscriptions.retrieve(subId);
+    const addOnsOnCurrentSubscriptionID = subscription.items.data[0].id;
+    console.log("subscription is \n", JSON.stringify(subscription, null, 2));
+    const existingItem = subscription.items.data.find(
+      (item) => item.price.id === newPriceId
+    );
+    console.log("existing item is \n", JSON.stringify(existingItem, null, 2));
+    if (existingItem) {
+      // Update the quantity of the existing subscription item
+      const updatedSubscription = await stripe.subscriptions.update(subId, {
+        items: [
+          {
+            id: newPriceId,
+            quantity: existingItem.quantity + parseInt(quantity, 10),
+          },
+        ],
+        proration_behavior: "none",
+      });
+      return res.status(200).send({ message: "success", updatedSubscription });
+    } else {
+      // Add a new subscription item
+      console.log("Entered in to the else condition \n");
+      // const updatedSubscription = await stripe.subscriptionItems.update(
+      //   addOnsOnCurrentSubscriptionID,
+      //   {
+      //     price: newPriceId,
+      //     quantity,
+      //     proration_behavior: "none",
+      //   }
+      // );
+      const updatedSubscription = await stripe.subscriptions.update(subId, {
+        items: [
+          {
+            price: newPriceId,
+            quantity,
+            metadata: {
+              subType: "add-ons",
+            },
+          },
+        ],
+        proration_behavior: "none",
+      });
+      return res.status(200).send({ message: "success", updatedSubscription });
+    }
+  } catch (e) {
+    console.log(e);
+    res.status(500).send({ error: e.message });
+  }
+});
+
+app.get("/cancel-additional-credit-new", async (req, res) => {
+  res.send({ message: "Error in the add new credit plan" });
+});
+
 app.post("/cancel-subscription", async (req, res) => {
   try {
     const { subId } = req.body;
@@ -644,7 +862,6 @@ app.post("/cancel-subscription", async (req, res) => {
     console.log(e);
   }
 });
-
 
 app.get("/ping", (req, res) => {
   res.json({ ping: "pong" });
