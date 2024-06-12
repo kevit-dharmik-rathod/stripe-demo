@@ -33,6 +33,7 @@ const corsConfig = {
 };
 app.use(cors(corsConfig));
 app.use(express.urlencoded({ extended: true }));
+
 app.post(
   "/webhook",
   express.raw({ type: "application/json" }),
@@ -45,8 +46,9 @@ app.post(
         req.body,
         sig,
         process.env.STRIPE_SECRET_WEBHOOK_KEY
-      ); // Replace with your webhook secret
+      );
     } catch (err) {
+      console.log(`Webhook signature verification failed.`, err.message);
       return res.sendStatus(400);
     }
 
@@ -70,18 +72,97 @@ app.post(
             );
           }
         }
-
         break;
-      case "checkout.session.async_payment_failed":
+      case "payment_intent.requires_action":
+        console.log("entered in to the payment_intent.requires_action\n");
+        await handlePaymentIntent(event.data.object);
         break;
-      // Handle other event types as needed
+      case "invoice.payment_action_required":
+        console.log("Entered in to the invoice.payment_action_required\n");
+        await handleInvoicePaymentAction(event.data.object);
+        break;
+      case "invoice.payment_failed":
+        console.log("Entered in to the invoice.payment_failed\n");
+        await handleInvoicePaymentFailed(event.data.object);
+        break;
       default:
+        console.log(`Unhandled event type ${event.type}`);
     }
 
     res.json({ received: true });
   }
 );
 
+async function handlePaymentIntent(paymentIntent) {
+  try {
+    if (
+      paymentIntent.status === "requires_action" &&
+      paymentIntent.next_action.type === "use_stripe_sdk"
+    ) {
+      console.log("Entered in to the if condition of handlePaymentIntent\n");
+      const confirmedPaymentIntent = await stripe.paymentIntents.confirm(
+        paymentIntent.id,
+        {
+          payment_method: paymentIntent.payment_method,
+        }
+      );
+      console.log("PaymentIntent confirmed:", confirmedPaymentIntent);
+      await handleInvoicePayment(confirmedPaymentIntent.invoice);
+    } else {
+      console.log(
+        "PaymentIntent does not require action or already confirmed:",
+        paymentIntent.id
+      );
+    }
+  } catch (error) {
+    console.error("Error confirming PaymentIntent:", error.message);
+  }
+}
+
+async function handleInvoicePaymentAction(invoice) {
+  try {
+    const paymentIntent = await stripe.paymentIntents.retrieve(
+      invoice.payment_intent
+    );
+    await handlePaymentIntent(paymentIntent);
+  } catch (error) {
+    console.error("Error handling invoice payment action:", error.message);
+  }
+}
+
+async function handleInvoicePaymentFailed(invoice) {
+  try {
+    const paymentIntent = await stripe.paymentIntents.retrieve(
+      invoice.payment_intent
+    );
+    await handlePaymentIntent(paymentIntent);
+  } catch (error) {
+    console.error("Error handling invoice payment failed:", error.message);
+  }
+}
+
+async function handleInvoicePayment(invoiceId) {
+  try {
+    const invoice = await stripe.invoices.retrieve(invoiceId);
+
+    // Check if the invoice is already finalized
+    if (invoice.status === "draft") {
+      // Finalize the invoice if it is still a draft
+      const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoiceId);
+      console.log("Finalized Invoice:", finalizedInvoice);
+
+      // Attempt to pay the invoice
+      const paidInvoice = await stripe.invoices.pay(invoiceId);
+      console.log("Paid Invoice:", paidInvoice);
+    } else {
+      // If the invoice is already finalized, attempt to pay it
+      const paidInvoice = await stripe.invoices.pay(invoiceId);
+      console.log("Paid Invoice:", paidInvoice);
+    }
+  } catch (error) {
+    console.error("Error handling invoice payment:", error.message);
+  }
+}
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 //firstly we create the customer in the stripe
@@ -150,6 +231,7 @@ app.post("/create-free-subscription", async (req, res) => {
     const paymentMethod = await stripe.paymentMethods.create({
       type: "card",
       card: { token: "tok_threeDSecure2Required" },
+      // card: { token: "tok_visa" },
     });
     console.log("paymentMethod is \n", JSON.stringify(paymentMethod, null, 2));
 
@@ -213,12 +295,13 @@ app.post("/create-subscription", async (req, res) => {
 
 app.post("/upgrade-subscription", async (req, res) => {
   try {
-    const { customerId, subId, newSubPriceId, newAddOnPriceId } = req.body;
+    const { customerId, subId, newSubPriceId, newAddOnPriceId, addOnFlag } =
+      req.body;
     console.log("customerId: " + customerId);
     console.log("subId is\n", subId);
     console.log("newSubPriceId is\n", newSubPriceId);
     console.log("newADDOnPriceId is\n", newAddOnPriceId);
-
+    console.log("addOnFlag is\n", addOnFlag);
     // case-1 if user have not any subscription
     if (subId.trim() === "") {
       const session = await stripe.checkout.sessions.create({
@@ -283,6 +366,42 @@ app.post("/upgrade-subscription", async (req, res) => {
       });
       return res.status(200).send({ message: "success", subscription });
     }
+
+    // if (
+    //   activeSubscription.items.data.length === 2 &&
+    //   activeSubscription.items.data[0].plan.nickname === "free" &&
+    //   activeSubscription.items.data[1].metadata.subType === "add-ons"
+    // ) {
+    //   console.log("Entered in to the case of free + add-ons\n");
+    //   const quantity = activeSubscription.items.data[1].quantity;
+    //   const subscription = await stripe.subscriptions.update(subId, {
+    //     items: [
+    //       {
+    //         id: activeSubscription.items.data[0].id,
+    //         deleted: true,
+    //       },
+    //       {
+    //         id: activeSubscription.items.data[1].id,
+    //         deleted: true,
+    //       },
+    //       {
+    //         price: newSubPriceId,
+    //         metadata: {
+    //           subType: "normal",
+    //         },
+    //       },
+    //       {
+    //         price: newAddOnPriceId,
+    //         metadata: {
+    //           subType: "add-ons",
+    //         },
+    //         quantity,
+    //       },
+    //     ],
+    //     proration_behavior: "create_prorations",
+    //   });
+    //   return res.status(200).send({ message: "success", subscription });
+    // }
     const price = newAddOnPriceId
       ? await stripe.prices.retrieve(newAddOnPriceId)
       : undefined;
@@ -695,8 +814,9 @@ app.post("/add-additional-credit-new", async (req, res) => {
           {
             price: newPriceId,
             metadata: {
-              subType: "normal",
+              subType: "add-ons",
             },
+            quantity,
           },
         ],
         proration_behavior: "none",

@@ -97,6 +97,10 @@
         <option value="price_1PQSOQCkpDKpVkAasCoUWBQC">Standard_Per_Day</option>
         <option value="price_1PO0RKSGVFR9zdBL2tS0N2kP">Premium_Per_Day</option>
       </select>
+      <select id="booleanInput" name="booleanInput">
+        <option value="true">True</option>
+        <option value="false">False</option>
+      </select>
       <button type="submit">Update</button>
     </form>
 
@@ -298,12 +302,13 @@
         const newAddOnPriceId = document.getElementById(
           "new-add-on-price-id"
         ).value;
-
+        const addOnFlag =
+          document.getElementById("booleanInput").value === "true";
         console.log("customerId: " + customerId);
         console.log("subId is\n", subId);
         console.log("newSubPriceId is\n", newSubPriceId);
         console.log("newADDOnPriceId is\n", newAddOnPriceId);
-        const response = await fetch(
+        await fetch(
           "https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-subscription",
           {
             method: "POST",
@@ -315,17 +320,35 @@
               subId,
               newSubPriceId,
               newAddOnPriceId,
+              addOnFlag,
             }),
           }
-        );
+        )
+          .then((response) => {
+            if (response.status === 302) {
+              // 3D Secure required, retrieve and redirect using client_secret
+              response.text().then((text) => {
+                const redirectUrl = text; // Extract the redirect URL from the response body (if provided)
+                window.location.href = redirectUrl; // Redirect the user to Stripe's authentication page
+              });
+            } else {
+              // No 3D Secure or other success response
+              // ... handle successful upgrade ...
+            }
+          })
+          .catch((error) => {
+            console.error(error);
+            // Handle errors
+          });
 
-        const { url } = await response.json();
-        if (response.ok) {
-          window.location.href = url;
-        } else {
-          window.location.href =
-            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel";
-        }
+        // const { url } = await response.json();
+        // console.log("url ")
+        // if (response.ok) {
+        //   window.location.href = url;
+        // } else {
+        //   window.location.href =
+        //     "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel";
+        // }
       });
 
       downgradeForm.addEventListener("submit", async (event) => {
