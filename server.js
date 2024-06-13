@@ -73,18 +73,6 @@ app.post(
           }
         }
         break;
-      case "payment_intent.requires_action":
-        console.log("entered in to the payment_intent.requires_action\n");
-        await handlePaymentIntent(event.data.object);
-        break;
-      case "invoice.payment_action_required":
-        console.log("Entered in to the invoice.payment_action_required\n");
-        await handleInvoicePaymentAction(event.data.object);
-        break;
-      case "invoice.payment_failed":
-        console.log("Entered in to the invoice.payment_failed\n");
-        await handleInvoicePaymentFailed(event.data.object);
-        break;
       default:
         console.log(`Unhandled event type ${event.type}`);
     }
@@ -93,76 +81,6 @@ app.post(
   }
 );
 
-async function handlePaymentIntent(paymentIntent) {
-  try {
-    if (
-      paymentIntent.status === "requires_action" &&
-      paymentIntent.next_action.type === "use_stripe_sdk"
-    ) {
-      console.log("Entered in to the if condition of handlePaymentIntent\n");
-      const confirmedPaymentIntent = await stripe.paymentIntents.confirm(
-        paymentIntent.id,
-        {
-          payment_method: paymentIntent.payment_method,
-        }
-      );
-      console.log("PaymentIntent confirmed:", confirmedPaymentIntent);
-      await handleInvoicePayment(confirmedPaymentIntent.invoice);
-    } else {
-      console.log(
-        "PaymentIntent does not require action or already confirmed:",
-        paymentIntent.id
-      );
-    }
-  } catch (error) {
-    console.error("Error confirming PaymentIntent:", error.message);
-  }
-}
-
-async function handleInvoicePaymentAction(invoice) {
-  try {
-    const paymentIntent = await stripe.paymentIntents.retrieve(
-      invoice.payment_intent
-    );
-    await handlePaymentIntent(paymentIntent);
-  } catch (error) {
-    console.error("Error handling invoice payment action:", error.message);
-  }
-}
-
-async function handleInvoicePaymentFailed(invoice) {
-  try {
-    const paymentIntent = await stripe.paymentIntents.retrieve(
-      invoice.payment_intent
-    );
-    await handlePaymentIntent(paymentIntent);
-  } catch (error) {
-    console.error("Error handling invoice payment failed:", error.message);
-  }
-}
-
-async function handleInvoicePayment(invoiceId) {
-  try {
-    const invoice = await stripe.invoices.retrieve(invoiceId);
-
-    // Check if the invoice is already finalized
-    if (invoice.status === "draft") {
-      // Finalize the invoice if it is still a draft
-      const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoiceId);
-      console.log("Finalized Invoice:", finalizedInvoice);
-
-      // Attempt to pay the invoice
-      const paidInvoice = await stripe.invoices.pay(invoiceId);
-      console.log("Paid Invoice:", paidInvoice);
-    } else {
-      // If the invoice is already finalized, attempt to pay it
-      const paidInvoice = await stripe.invoices.pay(invoiceId);
-      console.log("Paid Invoice:", paidInvoice);
-    }
-  } catch (error) {
-    console.error("Error handling invoice payment:", error.message);
-  }
-}
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 //firstly we create the customer in the stripe
@@ -230,8 +148,8 @@ app.post("/create-free-subscription", async (req, res) => {
     });
     const paymentMethod = await stripe.paymentMethods.create({
       type: "card",
-      card: { token: "tok_threeDSecure2Required" },
-      // card: { token: "tok_visa" },
+      // card: { token: "tok_threeDSecure2Required" },
+      card: { token: "tok_visa" },
     });
     console.log("paymentMethod is \n", JSON.stringify(paymentMethod, null, 2));
 
@@ -295,40 +213,39 @@ app.post("/create-subscription", async (req, res) => {
 
 app.post("/upgrade-subscription", async (req, res) => {
   try {
-    const { customerId, subId, newSubPriceId, newAddOnPriceId, addOnFlag } =
+    const { customerId, subId, newSubPriceId, newAddOnPriceId } =
       req.body;
     console.log("customerId: " + customerId);
     console.log("subId is\n", subId);
     console.log("newSubPriceId is\n", newSubPriceId);
     console.log("newADDOnPriceId is\n", newAddOnPriceId);
-    console.log("addOnFlag is\n", addOnFlag);
     // case-1 if user have not any subscription
-    if (subId.trim() === "") {
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
-        mode: "subscription",
-        customer: customerId,
-        line_items: [
-          {
-            price: newSubPriceId,
-            quantity: 1,
-          },
-        ],
-        metadata: {
-          subType: "normal",
-        },
-        subscription_data: {
-          metadata: {
-            subType: "normal",
-          },
-        },
-        success_url:
-          "https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-new-subscription/success",
-        cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
-      });
-      console.log("session.url is \n", session.url);
-      return res.send({ url: session.url });
-    }
+    // if (subId.trim() === "") {
+    //   const session = await stripe.checkout.sessions.create({
+    //     payment_method_types: ["card"],
+    //     mode: "subscription",
+    //     customer: customerId,
+    //     line_items: [
+    //       {
+    //         price: newSubPriceId,
+    //         quantity: 1,
+    //       },
+    //     ],
+    //     metadata: {
+    //       subType: "normal",
+    //     },
+    //     subscription_data: {
+    //       metadata: {
+    //         subType: "normal",
+    //       },
+    //     },
+    //     success_url:
+    //       "https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-new-subscription/success",
+    //     cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
+    //   });
+    //   console.log("session.url is \n", session.url);
+    //   return res.send({ url: session.url });
+    // }
 
     // case-2 when user has simple main subscription and move to upgrade to the new subscription
     const activeSubscription = await stripe.subscriptions.retrieve(subId);
@@ -344,28 +261,28 @@ app.post("/upgrade-subscription", async (req, res) => {
       activeSubscription.items.data[0].id
     );
     // case 0 if user has already in the free plan
-    if (
-      activeSubscription.items.data.length === 1 &&
-      activeSubscription.items.data[0].plan.nickname === "free"
-    ) {
-      console.log("Entered in to the case 0 condition \n");
-      const subscription = await stripe.subscriptions.update(subId, {
-        items: [
-          {
-            id: activeSubscription.items.data[0].id,
-            deleted: true,
-          },
-          {
-            price: newSubPriceId,
-            metadata: {
-              subType: "normal",
-            },
-          },
-        ],
-        proration_behavior: "none",
-      });
-      return res.status(200).send({ message: "success", subscription });
-    }
+    // if (
+    //   activeSubscription.items.data.length === 1 &&
+    //   activeSubscription.items.data[0].plan.nickname === "free"
+    // ) {
+    //   console.log("Entered in to the case 0 condition \n");
+    //   const subscription = await stripe.subscriptions.update(subId, {
+    //     items: [
+    //       {
+    //         id: activeSubscription.items.data[0].id,
+    //         deleted: true,
+    //       },
+    //       {
+    //         price: newSubPriceId,
+    //         metadata: {
+    //           subType: "normal",
+    //         },
+    //       },
+    //     ],
+    //     proration_behavior: "none",
+    //   });
+    //   return res.status(200).send({ message: "success", subscription });
+    // }
 
     // if (
     //   activeSubscription.items.data.length === 2 &&
@@ -858,6 +775,9 @@ app.post("/add-additional-credit-new", async (req, res) => {
       success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/additional-credit-new/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:
         "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel-additional-credit-new",
+      invoice_creation: {
+        enabled: true,
+      },
     });
     console.log("session is \n", session);
     res.send({ url: session.url });
@@ -879,9 +799,10 @@ app.get("/additional-credit-new/success", async (req, res) => {
       (item) => item.price.id === newPriceId
     );
     console.log("existing item is \n", JSON.stringify(existingItem, null, 2));
+    let updatedSubscription;
     if (existingItem) {
       // Update the quantity of the existing subscription item
-      const updatedSubscription = await stripe.subscriptions.update(subId, {
+      updatedSubscription = await stripe.subscriptions.update(subId, {
         items: [
           {
             id: newPriceId,
@@ -902,7 +823,7 @@ app.get("/additional-credit-new/success", async (req, res) => {
       //     proration_behavior: "none",
       //   }
       // );
-      const updatedSubscription = await stripe.subscriptions.update(subId, {
+      updatedSubscription = await stripe.subscriptions.update(subId, {
         items: [
           {
             price: newPriceId,

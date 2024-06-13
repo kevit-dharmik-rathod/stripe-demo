@@ -6,14 +6,6 @@
     <title>Stripe Subscription Management</title>
   </head>
   <body>
-    <h1>Create a new customer</h1>
-    <form id="create-customer-form">
-      <input type="text" id="name" placeholder="Enter your name" required />
-      <input type="email" id="email" placeholder="Enter your email" required />
-      <button type="submit">Create New</button>
-    </form>
-    <div id="new-customer-id"></div>
-
     <h1>Subscribe to a Plan</h1>
     <form id="subscription-form">
       <input
@@ -28,41 +20,10 @@
         placeholder="Enter your email"
         required
       />
-      <!-- <input
-        type="number"
-        id="cardNumber"
-        placeholder="Enter cardNumber"
-        required
-      />
-      <input
-        type="number"
-        id="card_exp_month"
-        placeholder="Enter exp month"
-        required
-      />
-      <input
-        type="number"
-        id="card_exp_year"
-        placeholder="Enter exp card_exp_year"
-        required
-      />
-      <input
-        type="number"
-        id="card_cvc"
-        placeholder="Enter card_CVC_Number"
-        required
-      /> -->
       <select id="subscribe-plan">
-        <option value="price_1PNDhjSGVFR9zdBLFta7Z9r1">Free Forever</option>
-        <option value="price_1PNDidSGVFR9zdBLiQYD9zuM">Basic Plan</option>
-        <option value="price_1PNDjUSGVFR9zdBLSB97meZm">Standard Plan</option>
-        <option value="price_1PNDk5SGVFR9zdBLcGXUJozR">Premium Plan</option>
-        <option value="price_1PQOjdCkpDKpVkAaHUZS5Z5F">
-          Free_Forever_Per_Day
-        </option>
-        <option value="price_1PO0M0SGVFR9zdBLJKvtemwW">Basic_Per_Day</option>
-        <option value="price_1PO0NbSGVFR9zdBLQAJnbYcu">Standard_Per_Day</option>
-        <option value="price_1PO0RKSGVFR9zdBL2tS0N2kP">Premium_Per_Day</option>
+        <option value="price_1PR764CkpDKpVkAaRWWtzJtm">Basic Plan</option>
+        <option value="price_1PRDrZCkpDKpVkAaaGgHItzr">Standard Plan</option>
+        <option value="price_1PRDsgCkpDKpVkAaUb6hkbjL">Premium Plan</option>
       </select>
       <button type="submit">Subscribe</button>
     </form>
@@ -86,20 +47,9 @@
         placeholder="Enter new Add on PriceId"
       />
       <select id="new-plan">
-        <option value="price_1PNDhjSGVFR9zdBLFta7Z9r1">Free Forever</option>
-        <option value="price_1PNDidSGVFR9zdBLiQYD9zuM">Basic Plan</option>
-        <option value="price_1PNDjUSGVFR9zdBLSB97meZm">Standard Plan</option>
-        <option value="price_1PNDk5SGVFR9zdBLcGXUJozR">Premium Plan</option>
-        <option value="price_1PO0QRSGVFR9zdBLWFEl7fl8">
-          Free_Forever_Per_Day
-        </option>
-        <option value="price_1PQRLDCkpDKpVkAaPujXeJVE">Basic_Per_Day</option>
-        <option value="price_1PQSOQCkpDKpVkAasCoUWBQC">Standard_Per_Day</option>
-        <option value="price_1PO0RKSGVFR9zdBL2tS0N2kP">Premium_Per_Day</option>
-      </select>
-      <select id="booleanInput" name="booleanInput">
-        <option value="true">True</option>
-        <option value="false">False</option>
+        <option value="price_1PR764CkpDKpVkAaRWWtzJtm">Basic Plan</option>
+        <option value="price_1PRDrZCkpDKpVkAaaGgHItzr">Standard Plan</option>
+        <option value="price_1PRDsgCkpDKpVkAaUb6hkbjL">Premium Plan</option>
       </select>
       <button type="submit">Update</button>
     </form>
@@ -118,16 +68,10 @@
         required
       />
       <select id="new-downgrade-plan">
-        <option value="price_1PNDhjSGVFR9zdBLFta7Z9r1">Free Forever</option>
-        <option value="price_1PNDidSGVFR9zdBLiQYD9zuM">Basic Plan</option>
-        <option value="price_1PNDjUSGVFR9zdBLSB97meZm">Standard Plan</option>
-        <option value="price_1PNDk5SGVFR9zdBLcGXUJozR">Premium Plan</option>
-        <option value="price_1PO0QRSGVFR9zdBLWFEl7fl8">
-          Free_Forever_Per_Day
-        </option>
-        <option value="price_1PO0M0SGVFR9zdBLJKvtemwW">Basic_Per_Day</option>
-        <option value="price_1PO0NbSGVFR9zdBLQAJnbYcu">Standard_Per_Day</option>
-        <option value="price_1PO0RKSGVFR9zdBL2tS0N2kP">Premium_Per_Day</option>
+        <option value="free-plan">Free Plan</option>
+        <option value="price_1PR764CkpDKpVkAaRWWtzJtm">Basic Plan</option>
+        <option value="price_1PRDrZCkpDKpVkAaaGgHItzr">Standard Plan</option>
+        <option value="price_1PRDsgCkpDKpVkAaUb6hkbjL">Premium Plan</option>
       </select>
       <button type="submit">Update</button>
     </form>
@@ -175,17 +119,16 @@
         required
       />
       <select id="additional-credit-plan-price">
-        <option value="price_1PQPDhCkpDKpVkAadf6s6HPk">
-          <!-- <option value="price_1POJMCSGVFR9zdBLVDRtwpOD"> -->
-          add_credit_free_plan_20_per_day
+        <option value="price_1PR9r9CkpDKpVkAaKHfbhj39">
+          add_credit_free_plan_20_per_month
         </option>
-        <option value="price_1POJN8SGVFR9zdBLih02bpCw">
-          add_credit_basic_plan_19_per_day
+        <option value="price_1PRB1bCkpDKpVkAaaZdD1m8K">
+          add_credit_basic_19_Per_Month
         </option>
-        <option value="price_1POJOUSGVFR9zdBLa99mrsGg">
+        <option value="price_1PRE01CkpDKpVkAa5vtgACpA">
           add_credit_standard_plan_13_per_day
         </option>
-        <option value="price_1POJPMSGVFR9zdBLnDd79E86">
+        <option value="price_1PRE0nCkpDKpVkAauK6kBJTJ">
           add_credit_premium_plan_12_per_day
         </option>
       </select>
@@ -205,7 +148,6 @@
     <script src="https://js.stripe.com/v3/" async></script>
 
     <script>
-      const newCustomerForm = document.getElementById("create-customer-form");
       const subscriptionForm = document.getElementById("subscription-form");
       const upgradeForm = document.getElementById("upgrade-form");
       const downgradeForm = document.getElementById("downgrade-form");
@@ -217,56 +159,17 @@
       );
       const cancelForm = document.getElementById("cancel-form");
 
-      newCustomerForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        const name = document.getElementById("name").value;
-        const email = document.getElementById("email").value;
-        console.log("name and email", name, email);
-        const response = await fetch(
-          "https://vbpflfwp-3000.inc1.devtunnels.ms/customer/add",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              name: name,
-              email: email,
-            }),
-          }
-        );
-        if (response.ok) {
-          const data = await response.json();
-          console.log("data in the frontend", data);
-          const customerId = data.id;
-
-          // Display the new customer ID
-          document.getElementById(
-            "new-customer-id"
-          ).innerText = `New customer created with ID: ${customerId}`;
-        } else {
-          const errorData = await response.json();
-          document.getElementById(
-            "new-customer-id"
-          ).innerText = `Error: ${errorData.error}`;
-        }
-      });
-
       subscriptionForm.addEventListener("submit", async (event) => {
         event.preventDefault();
         const name = document.getElementById("subscribe-name").value;
         const email = document.getElementById("subscribe-email").value;
         const priceId = document.getElementById("subscribe-plan").value;
-        // const cardNumber = document.getElementById("cardNumber").value;
-        // const card_exp_month = document.getElementById("card_exp_month").value;
-        // const card_exp_year = document.getElementById("card_exp_year").value;
-        // const card_cvc = document.getElementById("card_cvc").value;
 
         console.log("frontend name is \n", name);
         console.log("frontend email is\n", email);
         console.log("frontend price is \n", priceId);
         const response = await fetch(
-          "https://vbpflfwp-3000.inc1.devtunnels.ms/create-free-subscription",
+          "https://vbpflfwp-3000.inc1.devtunnels.ms/create-subscription",
           {
             method: "POST",
             headers: {
@@ -276,22 +179,16 @@
               name: name,
               email: email,
               priceId: priceId,
-              // cardNumber,
-              // card_exp_month,
-              // card_exp_year,
-              // card_cvc,
             }),
           }
         );
-        // const r= await response.json();
-        return await response.json();
-
-        // if (response.ok) {
-        //   window.location.href = url; // Redirect to the checkout URL
-        // } else {
-        //   window.location.href =
-        //     "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel";
-        // }
+        if (response.ok) {
+          const { url } = await response.json();
+          window.location.href = url; // Redirect to the checkout URL
+        } else {
+          window.location.href =
+            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel";
+        }
       });
 
       upgradeForm.addEventListener("submit", async (event) => {
