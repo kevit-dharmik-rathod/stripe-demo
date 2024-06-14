@@ -20,18 +20,23 @@
         placeholder="Enter your email"
         required
       />
+      <input
+        type="number"
+        id="free-addons-quantity"
+        placeholder="Enter addOns Quantity"
+      />
       <select id="subscribe-plan">
-          <option value="price_1PR9r9CkpDKpVkAaKHfbhj39">
+        <option value="price_1PR9r9CkpDKpVkAaKHfbhj39">
           add_credit_free_plan_20_per_month
         </option>
         <option value="price_1PR764CkpDKpVkAaRWWtzJtm">Basic Plan</option>
-        <option value="price_1PRDrZCkpDKpVkAaaGgHItzr">Standard Plan</option>
-        <option value="price_1PRDsgCkpDKpVkAaUb6hkbjL">Premium Plan</option>
+        <option value="price_1PRTyxCkpDKpVkAacd70vFTO">Standard Plan</option>
+        <option value="price_1PRTzmCkpDKpVkAaMt4HMKvb">Premium Plan</option>
       </select>
-       <select id="isAddons">
-    <option value="true">True</option>
-    <option value="false">False</option>
-  </select>
+      <select id="isAddons">
+        <option value="true">True</option>
+        <option value="false">False</option>
+      </select>
       <button type="submit">Subscribe</button>
     </form>
 
@@ -55,8 +60,8 @@
       />
       <select id="new-plan">
         <option value="price_1PR764CkpDKpVkAaRWWtzJtm">Basic Plan</option>
-        <option value="price_1PRDrZCkpDKpVkAaaGgHItzr">Standard Plan</option>
-        <option value="price_1PRDsgCkpDKpVkAaUb6hkbjL">Premium Plan</option>
+        <option value="price_1PRTyxCkpDKpVkAacd70vFTO">Standard Plan</option>
+        <option value="price_1PRTzmCkpDKpVkAaMt4HMKvb">Premium Plan</option>
       </select>
       <button type="submit">Update</button>
     </form>
@@ -77,8 +82,8 @@
       <select id="new-downgrade-plan">
         <option value="free-plan">Free Plan</option>
         <option value="price_1PR764CkpDKpVkAaRWWtzJtm">Basic Plan</option>
-        <option value="price_1PRDrZCkpDKpVkAaaGgHItzr">Standard Plan</option>
-        <option value="price_1PRDsgCkpDKpVkAaUb6hkbjL">Premium Plan</option>
+        <option value="price_1PRTyxCkpDKpVkAacd70vFTO">Standard Plan</option>
+        <option value="price_1PRTzmCkpDKpVkAaMt4HMKvb">Premium Plan</option>
       </select>
       <button type="submit">Update</button>
     </form>
@@ -92,16 +97,14 @@
         required
       />
       <select id="additional-plan">
-        <option value="price_1POH7gSGVFR9zdBL6hub8jmJ">
-          Free_Forever_Per_Day_10
-        </option>
-        <option value="price_1POI0eSGVFR9zdBLeRtfrWyn">Basic_Per_Day_94</option>
-        <option value="price_1POH9ASGVFR9zdBLm8QdkN7m">
-          Standard_Per_Day_179
-        </option>
-        <option value="price_1POH9oSGVFR9zdBLKRe8TIXk">
-          Premium_Per_Day_239
-        </option>
+        <option value="price_1PR764CkpDKpVkAaRWWtzJtm">Basic Plan</option>
+        <option value="price_1PRTyxCkpDKpVkAacd70vFTO">Standard Plan</option>
+        <option value="price_1PRTzmCkpDKpVkAaMt4HMKvb">Premium Plan</option>
+      </select>
+      <select id="couponId">
+        <option value="price_1PR764CkpDKpVkAaRWWtzJtm">Basic Plan</option>
+        <option value="price_1PRTyxCkpDKpVkAacd70vFTO">Standard Plan</option>
+        <option value="xM5KmZS7">Premium Coupon</option>
       </select>
       <button type="submit">Subscribe</button>
     </form>
@@ -132,10 +135,10 @@
         <option value="price_1PRB1bCkpDKpVkAaaZdD1m8K">
           add_credit_basic_19_Per_Month
         </option>
-        <option value="price_1PRE01CkpDKpVkAa5vtgACpA">
+        <option value="price_1PRU2SCkpDKpVkAaLH3v5Ea6">
           add_credit_standard_plan_13_per_day
         </option>
-        <option value="price_1PRE0nCkpDKpVkAauK6kBJTJ">
+        <option value="price_1PRU34CkpDKpVkAaycOj5Vqc">
           add_credit_premium_plan_12_per_day
         </option>
       </select>
@@ -171,13 +174,14 @@
         const name = document.getElementById("subscribe-name").value;
         const email = document.getElementById("subscribe-email").value;
         const priceId = document.getElementById("subscribe-plan").value;
+        const quantity = document.getElementById("free-addons-quantity").value;
         const isAddons = document.getElementById("isAddons").value;
-        const isAddonsFlag = isAddons === "true"? true: false;
+        const isAddonsFlag = isAddons === "true" ? true : false;
         console.log("frontend name is \n", name);
         console.log("frontend email is\n", email);
         console.log("frontend price is \n", priceId);
         const response = await fetch(
-          "https://6f9dpz0d-3000.inc1.devtunnels.ms/create-subscription",
+          "https://vbpflfwp-3000.inc1.devtunnels.ms/create-subscription",
           {
             method: "POST",
             headers: {
@@ -188,6 +192,7 @@
               email: email,
               priceId: priceId,
               isAddonsFlag,
+              quantity,
             }),
           }
         );
@@ -196,7 +201,7 @@
           window.location.href = url; // Redirect to the checkout URL
         } else {
           window.location.href =
-            "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel";
+            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel";
         }
       });
 
@@ -208,14 +213,12 @@
         const newAddOnPriceId = document.getElementById(
           "new-add-on-price-id"
         ).value;
-        const addOnFlag =
-          document.getElementById("booleanInput").value === "true";
         console.log("customerId: " + customerId);
         console.log("subId is\n", subId);
         console.log("newSubPriceId is\n", newSubPriceId);
         console.log("newADDOnPriceId is\n", newAddOnPriceId);
-        await fetch(
-          "https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-subscription",
+        const response = await fetch(
+          "https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-subscription",
           {
             method: "POST",
             headers: {
@@ -226,35 +229,18 @@
               subId,
               newSubPriceId,
               newAddOnPriceId,
-              addOnFlag,
             }),
           }
-        )
-          .then((response) => {
-            if (response.status === 302) {
-              // 3D Secure required, retrieve and redirect using client_secret
-              response.text().then((text) => {
-                const redirectUrl = text; // Extract the redirect URL from the response body (if provided)
-                window.location.href = redirectUrl; // Redirect the user to Stripe's authentication page
-              });
-            } else {
-              // No 3D Secure or other success response
-              // ... handle successful upgrade ...
-            }
-          })
-          .catch((error) => {
-            console.error(error);
-            // Handle errors
-          });
+        );
 
-        // const { url } = await response.json();
-        // console.log("url ")
-        // if (response.ok) {
-        //   window.location.href = url;
-        // } else {
-        //   window.location.href =
-        //     "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel";
-        // }
+        const { url } = await response.json();
+        console.log("url ");
+        if (response.ok) {
+          window.location.href = url;
+        } else {
+          window.location.href =
+            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel";
+        }
       });
 
       downgradeForm.addEventListener("submit", async (event) => {
@@ -266,7 +252,7 @@
         const subId = document.getElementById("downgrade-sub-id").value;
         try {
           const response = await fetch(
-            "https://6f9dpz0d-3000.inc1.devtunnels.ms/downgrade-subscription",
+            "https://vbpflfwp-3000.inc1.devtunnels.ms/downgrade-subscription",
             {
               method: "POST",
               headers: {
@@ -282,10 +268,10 @@
           if (response.ok) {
             const result = await response.json();
             window.location.href =
-              "https://6f9dpz0d-3000.inc1.devtunnels.ms/schedule-success";
+              "https://vbpflfwp-3000.inc1.devtunnels.ms/schedule-success";
           } else {
             window.location.href =
-              "https://6f9dpz0d-3000.inc1.devtunnels.ms/schedule-cancel";
+              "https://vbpflfwp-3000.inc1.devtunnels.ms/schedule-cancel";
           }
         } catch (e) {
           console.log("Error in the downgrade frontend: ", e);
@@ -299,7 +285,7 @@
         console.log("customerId in the additionalProjectForm\n", customerId);
         console.log("newPriceId in the additionalProjectForm\n", newPriceId);
         const response = await fetch(
-          "https://6f9dpz0d-3000.inc1.devtunnels.ms/add-additional-project",
+          "https://vbpflfwp-3000.inc1.devtunnels.ms/add-additional-project",
           {
             method: "POST",
             headers: {
@@ -317,7 +303,7 @@
           window.location.href = url; // Redirect to the checkout URL
         } else {
           window.location.href =
-            "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel";
+            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel";
         }
       });
 
@@ -331,7 +317,7 @@
         const subId = document.getElementById("subscriptionId").value;
 
         const response = await fetch(
-          "https://6f9dpz0d-3000.inc1.devtunnels.ms/add-additional-credit-new",
+          "https://vbpflfwp-3000.inc1.devtunnels.ms/add-additional-credit",
           {
             method: "POST",
             headers: {
@@ -351,7 +337,7 @@
           window.location.href = url;
         } else {
           window.location.href =
-            "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel-additional-credit-new";
+            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel-additional-credit";
         }
       });
 
@@ -361,7 +347,7 @@
         console.log("subId in the cancel-form", subId);
         try {
           const response = await fetch(
-            "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel-subscription",
+            "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel-subscription",
             {
               method: "POST",
               headers: {
@@ -375,10 +361,10 @@
           if (response.ok) {
             const result = await response.json();
             window.location.href =
-              "https://6f9dpz0d-3000.inc1.devtunnels.ms/schedule-success";
+              "https://vbpflfwp-3000.inc1.devtunnels.ms/schedule-success";
           } else {
             window.location.href =
-              "https://6f9dpz0d-3000.inc1.devtunnels.ms/schedule-cancel";
+              "https://vbpflfwp-3000.inc1.devtunnels.ms/schedule-cancel";
           }
         } catch (e) {
           console.log("Error in the downgrade frontend: ", e);
