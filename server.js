@@ -73,7 +73,10 @@ app.post(
                 },
               }
             );
-          } else if (session.metadata.subType === "normal-first-time") {
+          } else if (
+            session.metadata.subType === "normal-first-time" ||
+            session.metadata.subType === "normal"
+          ) {
             console.log(
               "Entered in to the session normal subscription condition\n"
             );
@@ -88,6 +91,12 @@ app.post(
             );
           }
         }
+        break;
+      case "customer.subscription.created":
+        break;
+      case "customer.subscription.updated":
+        break;
+      case "customer.subscription.deleted":
         break;
       default:
       // console.log(`Unhandled event type ${event.type}`);
@@ -110,6 +119,35 @@ async function createCustomer(name, email) {
   }
 }
 
+async function createCheckoutSessionForAdditionalProject(
+  customerId,
+  newPriceId,
+  couponId
+) {
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      customer: customerId,
+      line_items: [
+        {
+          price: newPriceId,
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        subType: "normal",
+      },
+      mode: "subscription",
+      discounts: [{ coupon: couponId }],
+      success_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/success",
+      cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
+    });
+
+    return session.url;
+  } catch (e) {
+    console.log(e);
+  }
+}
 async function createCheckoutSession(cId, priceId, isAddonsFlag, quantity) {
   try {
     let metadata;
@@ -117,7 +155,7 @@ async function createCheckoutSession(cId, priceId, isAddonsFlag, quantity) {
       metadata = {
         subType: "add-ons-first-time",
       };
-    } else {
+    } else if (isAddonsFlag === false) {
       metadata = {
         subType: "normal-first-time",
       };
@@ -132,6 +170,11 @@ async function createCheckoutSession(cId, priceId, isAddonsFlag, quantity) {
         },
       ],
       metadata,
+      subscription_data: {
+        metadata: {
+          projectId: "proj_Id1",
+        },
+      },
       mode: "subscription",
       success_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/success",
       cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
@@ -595,7 +638,11 @@ app.get("/schedule-cancel", async (req, res) => {
 app.post("/add-additional-project", async (req, res) => {
   try {
     const { customerId, newPriceId, couponId } = req.body;
-    const checkoutUrl = await createCheckoutSession(customerId, newPriceId);
+    const checkoutUrl = await createCheckoutSessionForAdditionalProject(
+      customerId,
+      newPriceId,
+      couponId
+    );
     res.send({ url: checkoutUrl });
   } catch (e) {
     console.log(`Error in the add-additional-project: ${e}`);

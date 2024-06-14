@@ -102,8 +102,8 @@
         <option value="price_1PRTzmCkpDKpVkAaMt4HMKvb">Premium Plan</option>
       </select>
       <select id="couponId">
-        <option value="price_1PR764CkpDKpVkAaRWWtzJtm">Basic Plan</option>
-        <option value="price_1PRTyxCkpDKpVkAacd70vFTO">Standard Plan</option>
+        <option value="xpUXcBLz">Basic Coupon</option>
+        <option value="yv7VN1OX">Standard Coupon</option>
         <option value="xM5KmZS7">Premium Coupon</option>
       </select>
       <button type="submit">Subscribe</button>
@@ -282,6 +282,7 @@
         event.preventDefault();
         const customerId = document.getElementById("addCuId").value;
         const newPriceId = document.getElementById("additional-plan").value;
+        const couponId = document.getElementById("couponId").value;
         console.log("customerId in the additionalProjectForm\n", customerId);
         console.log("newPriceId in the additionalProjectForm\n", newPriceId);
         const response = await fetch(
@@ -294,6 +295,7 @@
             body: JSON.stringify({
               customerId,
               newPriceId,
+              couponId,
             }),
           }
         );
