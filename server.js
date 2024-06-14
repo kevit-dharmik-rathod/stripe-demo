@@ -60,7 +60,20 @@ app.post(
             session.subscription
           );
           let updatedSubscriptionItem;
-          if (session.metadata.subType === "normal") {
+          if (session.metadata.subType === "add-ons-first-time") {
+            console.log("Entered in to the add-ons-first-time session condition\n");
+            const subscriptionItemId = subscription.items.data[0].id;
+            updatedSubscriptionItem = await stripe.subscriptionItems.update(
+              subscriptionItemId,
+              {
+                metadata: {
+                  subType: "add-ons",
+                },
+              }
+            );
+          }
+          else if (session.metadata.subType === "normal-first-time") {
+            console.log("Entered in to the session normal subscription condition\n");
             const subscriptionItemId = subscription.items.data[0].id;
             updatedSubscriptionItem = await stripe.subscriptionItems.update(
               subscriptionItemId,
@@ -74,7 +87,7 @@ app.post(
         }
         break;
       default:
-        console.log(`Unhandled event type ${event.type}`);
+      // console.log(`Unhandled event type ${event.type}`);
     }
 
     res.json({ received: true });
@@ -94,8 +107,18 @@ async function createCustomer(name, email) {
   }
 }
 
-async function createCheckoutSession(cId, priceId) {
+async function createCheckoutSession(cId, priceId, isAddonsFlag) {
   try {
+    let metadata;
+    if (isAddonsFlag) {
+      metadata = {
+        subType: "add-ons-first-time"
+      }
+    } else {
+      metadata = {
+        subType: "normal-first-time"
+      }
+    }
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       customer: cId,
@@ -105,17 +128,10 @@ async function createCheckoutSession(cId, priceId) {
           quantity: 1,
         },
       ],
-      subscription_data: {
-        metadata: {
-          subType: "normal",
-        },
-      },
-      metadata: {
-        subType: "normal",
-      },
+      metadata,
       mode: "subscription",
-      success_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/success",
-      cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
+      success_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/success",
+      cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
     });
 
     return session.url;
@@ -202,9 +218,9 @@ app.get("/cancel", (req, res) => {
 
 app.post("/create-subscription", async (req, res) => {
   try {
-    const { name, email, priceId } = req.body;
+    const { name, email, priceId, isAddonsFlag } = req.body;
     const customer = await createCustomer(name, email);
-    const checkoutUrl = await createCheckoutSession(customer.id, priceId);
+    const checkoutUrl = await createCheckoutSession(customer.id, priceId, isAddonsFlag);
     res.send({ url: checkoutUrl });
   } catch (e) {
     throw new Error(e);
@@ -240,8 +256,8 @@ app.post("/upgrade-subscription", async (req, res) => {
     //       },
     //     },
     //     success_url:
-    //       "https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-new-subscription/success",
-    //     cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
+    //       "https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-new-subscription/success",
+    //     cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
     //   });
     //   console.log("session.url is \n", session.url);
     //   return res.send({ url: session.url });
@@ -386,8 +402,8 @@ app.post("/upgrade-subscription", async (req, res) => {
         upcomingInvoice.lines.data.length === 0
           ? upcomingInvoice.lines.data.amount + addOnTotal
           : upcomingInvoice.lines.data
-              .filter((line) => line.proration)
-              .reduce((total, line) => total + line.amount, 0) + addOnTotal;
+            .filter((line) => line.proration)
+            .reduce((total, line) => total + line.amount, 0) + addOnTotal;
     }
     console.log("Total proration amount is", prorationAmount);
 
@@ -412,8 +428,8 @@ app.post("/upgrade-subscription", async (req, res) => {
       mode: "payment",
       customer: customerId,
       line_items,
-      success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/upgrade-payment-success/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
+      success_url: `https://6f9dpz0d-3000.inc1.devtunnels.ms/upgrade-payment-success/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
       metadata: {
         updateSubArray: JSON.stringify(updateSubArray), // Serialize the updateSubArray
       },
@@ -485,21 +501,21 @@ app.post("/downgrade-subscription", async (req, res) => {
 
     const items = addOnsQuantity
       ? [
-          {
-            price: newPriceId,
-            quantity: 1,
-          },
-          {
-            price: newAddOnPriceId,
-            quantity: addOnsQuantity,
-          },
-        ]
+        {
+          price: newPriceId,
+          quantity: 1,
+        },
+        {
+          price: newAddOnPriceId,
+          quantity: addOnsQuantity,
+        },
+      ]
       : [
-          {
-            price: newPriceId,
-            quantity: 1,
-          },
-        ];
+        {
+          price: newPriceId,
+          quantity: 1,
+        },
+      ];
     const subscriptionSchedule = await stripe.subscriptionSchedules.create({
       from_subscription: subId,
     });
@@ -584,32 +600,32 @@ app.post("/add-additional-credit", async (req, res) => {
     const subscription_data =
       paymentMode === "subscription"
         ? {
-            metadata: {
-              subType: "add-ons",
-            },
-          }
+          metadata: {
+            subType: "add-ons",
+          },
+        }
         : {};
     console.log("subscription_data\n", subscription_data);
     const line_items =
       paymentMode === "subscription"
         ? [{ price: newPriceId, quantity }]
         : [
-            {
-              price_data: {
-                currency: price.currency,
-                unit_amount_decimal: price.unit_amount_decimal,
-                product_data: {
-                  name: "Proration Add on product",
-                  description: "proration add on product charges",
-                  images: [],
-                  metadata: {
-                    subType: "add-ons",
-                  },
+          {
+            price_data: {
+              currency: price.currency,
+              unit_amount_decimal: price.unit_amount_decimal,
+              product_data: {
+                name: "Proration Add on product",
+                description: "proration add on product charges",
+                images: [],
+                metadata: {
+                  subType: "add-ons",
                 },
               },
-              quantity,
             },
-          ];
+            quantity,
+          },
+        ];
 
     console.log("line_items", line_items);
     const metadata = {
@@ -625,8 +641,8 @@ app.post("/add-additional-credit", async (req, res) => {
       line_items,
       subscription_data,
       metadata,
-      success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/additional-credit/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel",
+      success_url: `https://6f9dpz0d-3000.inc1.devtunnels.ms/additional-credit/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel",
     });
     console.log("session is \n", session);
     res.send({ url: session.url });
@@ -772,9 +788,9 @@ app.post("/add-additional-credit-new", async (req, res) => {
       customer: customerId,
       line_items,
       metadata,
-      success_url: `https://vbpflfwp-3000.inc1.devtunnels.ms/additional-credit-new/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `https://6f9dpz0d-3000.inc1.devtunnels.ms/additional-credit-new/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url:
-        "https://vbpflfwp-3000.inc1.devtunnels.ms/cancel-additional-credit-new",
+        "https://6f9dpz0d-3000.inc1.devtunnels.ms/cancel-additional-credit-new",
       invoice_creation: {
         enabled: true,
       },
