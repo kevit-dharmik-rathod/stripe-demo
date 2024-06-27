@@ -597,6 +597,7 @@ app.post("/downgrade-subscription", async (req, res) => {
       start_date: phase.start_date,
       end_date: phase.end_date,
       items: phase.items,
+      proration_behavior: "none",
     }));
 
     const downgradeSubscription = await stripe.subscriptionSchedules.update(
@@ -607,7 +608,7 @@ app.post("/downgrade-subscription", async (req, res) => {
           ...phases,
           {
             items,
-            proration_behavior: "none",
+            proration_behavior: "none", // this is also one phase which we want to apply after ending the upper current phase
           },
         ],
       }
@@ -978,7 +979,7 @@ app.post("/cancel-subscription", async (req, res) => {
       items: phase.items,
     }));
 
-    const downgradeSubscription = await stripe.subscriptionSchedules.update(
+    const cancelSubscription = await stripe.subscriptionSchedules.update(
       subscriptionSchedule.id,
       {
         end_behavior: "cancel",
@@ -988,7 +989,7 @@ app.post("/cancel-subscription", async (req, res) => {
 
     res.status(200).send({
       message: "create schedule for downgrade subscription successfully",
-      downgradeSubscription,
+      cancelSubscription,
     });
   } catch (e) {
     console.log(e);
